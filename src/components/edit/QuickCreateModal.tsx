@@ -115,14 +115,6 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
             </>
           )}
 
-          {mode.kind === "zone" && (
-            <div>
-              <div className="hud-label mb-1">ANGLE (0-360)</div>
-              <input type="number" min={0} max={360} value={angle} onChange={(e) => setAngle(+e.target.value)}
-                className="w-full px-3 py-2 bg-black/40 border font-mono text-sm focus:outline-none"
-                style={{ borderColor: "var(--border-glow)", color: "var(--text-primary)" }} />
-            </div>
-          )}
         </div>
 
         {error && (
