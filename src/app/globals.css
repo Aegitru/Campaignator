@@ -1,39 +1,28 @@
 @import "tailwindcss";
 
-/* =============================================================
-   WH40K Campaign Tracker — Design System
-   Palette : variations de bleu uniquement (pas de jaune/ambre)
-   ============================================================= */
-
 :root {
-  /* Backgrounds */
   --bg-deep:        #050810;
   --bg-darker:      #020408;
   --panel-bg:       rgba(5, 15, 30, 0.85);
   --panel-bg-solid: #07101e;
 
-  /* Accents (que du bleu) */
-  --accent-blue:     #00aaff;   /* Bleu électrique HUD */
-  --accent-cyan:     #7fdfff;   /* Cyan clair — remplace l'or pour titres importants */
-  --accent-steel:    #4a9eff;   /* Bleu acier — états secondaires */
-  --accent-red:      #8b1a1a;   /* Rouge sang — danger/ennemi (préservé) */
+  --accent-blue:     #00aaff;
+  --accent-cyan:     #7fdfff;
+  --accent-steel:    #4a9eff;
+  --accent-red:      #8b1a1a;
 
-  /* Textes */
   --text-primary:    #c8d8e8;
   --text-secondary:  #6a8a9a;
   --text-faded:      #3a5060;
 
-  /* Bordures & glows */
   --border-glow:     rgba(0, 170, 255, 0.35);
   --border-strong:   rgba(127, 223, 255, 0.55);
   --border-faded:    rgba(0, 170, 255, 0.15);
 
-  /* Glow effects */
   --glow-blue:       0 0 12px rgba(0, 170, 255, 0.45);
   --glow-cyan:       0 0 14px rgba(127, 223, 255, 0.55);
   --glow-red:        0 0 12px rgba(139, 26, 26, 0.55);
 
-  /* Tailwind v4 theme bindings */
   --color-background: var(--bg-deep);
   --color-foreground: var(--text-primary);
 }
@@ -52,16 +41,9 @@
   --font-mono: var(--font-share-tech-mono);
 }
 
-/* =============================================================
-   Base
-   ============================================================= */
+* { box-sizing: border-box; }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
+html, body {
   background: var(--bg-deep);
   color: var(--text-primary);
   font-family: var(--font-share-tech-mono), ui-monospace, monospace;
@@ -73,16 +55,11 @@ body {
   overflow-x: hidden;
 }
 
-/* Interactive elements use crosshair cursor (cdc) */
-button,
-a,
-[role="button"],
-[data-interactive="true"] {
+button, a, [role="button"], [data-interactive="true"] {
   cursor: crosshair;
 }
 
-h1, h2, h3, h4, h5, h6,
-.font-display {
+h1, h2, h3, h4, h5, h6, .font-display {
   font-family: var(--font-cinzel), serif;
   letter-spacing: 0.08em;
 }
@@ -91,49 +68,26 @@ h1, h2, h3, h4, h5, h6,
   font-family: var(--font-share-tech-mono), ui-monospace, monospace;
 }
 
-/* =============================================================
-   Imperial HUD panels (à appliquer à TOUS les encadrés)
-   ============================================================= */
-
 .hud-panel {
   position: relative;
   background: var(--panel-bg);
   border: 1px solid var(--border-glow);
-  clip-path: polygon(
-    12px 0%,
-    100% 0%,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    0% 100%,
-    0% 12px
-  );
-  box-shadow:
-    0 0 12px rgba(0, 170, 255, 0.12),
-    inset 0 0 20px rgba(0, 0, 0, 0.5);
+  clip-path: polygon(12px 0%, 100% 0%, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 0% 12px);
+  box-shadow: 0 0 12px rgba(0, 170, 255, 0.12), inset 0 0 20px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
 }
 
 .hud-panel--strong {
   border-color: var(--border-strong);
-  box-shadow:
-    0 0 18px rgba(127, 223, 255, 0.22),
-    inset 0 0 24px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 18px rgba(127, 223, 255, 0.22), inset 0 0 24px rgba(0, 0, 0, 0.55);
 }
 
 .hud-panel--inset {
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--border-faded);
-  clip-path: polygon(
-    8px 0%,
-    100% 0%,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    0% 100%,
-    0% 8px
-  );
+  clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
 }
 
-/* HUD label — small uppercase mono label */
 .hud-label {
   font-family: var(--font-share-tech-mono), monospace;
   text-transform: uppercase;
@@ -142,7 +96,6 @@ h1, h2, h3, h4, h5, h6,
   font-size: 0.7rem;
 }
 
-/* HUD title — Cinzel accent cyan */
 .hud-title {
   font-family: var(--font-cinzel), serif;
   color: var(--accent-cyan);
@@ -151,7 +104,6 @@ h1, h2, h3, h4, h5, h6,
   text-shadow: 0 0 12px rgba(127, 223, 255, 0.35);
 }
 
-/* HUD button */
 .hud-button {
   position: relative;
   display: inline-flex;
@@ -166,14 +118,7 @@ h1, h2, h3, h4, h5, h6,
   color: var(--accent-cyan);
   background: rgba(0, 170, 255, 0.06);
   border: 1px solid var(--border-glow);
-  clip-path: polygon(
-    8px 0%,
-    100% 0%,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    0% 100%,
-    0% 8px
-  );
+  clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
   transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -192,35 +137,20 @@ h1, h2, h3, h4, h5, h6,
   cursor: not-allowed;
 }
 
-/* HUD divider */
 .hud-divider {
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--border-glow) 20%,
-    var(--border-glow) 80%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, var(--border-glow) 20%, var(--border-glow) 80%, transparent 100%);
 }
 
-/* Subtle scanline overlay for added technical feel */
 .scanlines::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(0, 170, 255, 0.04) 0px,
-    rgba(0, 170, 255, 0.04) 1px,
-    transparent 1px,
-    transparent 3px
-  );
+  background-image: repeating-linear-gradient(0deg, rgba(0, 170, 255, 0.04) 0px, rgba(0, 170, 255, 0.04) 1px, transparent 1px, transparent 3px);
   mix-blend-mode: screen;
 }
 
-/* Pulse animation for HUD elements */
 @keyframes hud-pulse {
   0%, 100% { opacity: 0.85; }
   50% { opacity: 1; }
@@ -230,26 +160,103 @@ h1, h2, h3, h4, h5, h6,
   animation: hud-pulse 2.4s ease-in-out infinite;
 }
 
-/* Subtle rotating gradient for backgrounds */
 @keyframes slow-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-/* Warp zoom transition Système → Planète */
 @keyframes warp-zoom {
   0%   { opacity: 0; transform: scale(1); }
   60%  { opacity: 0.8; transform: scale(1.5); }
   100% { opacity: 1; transform: scale(3); }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.4); }
+::-webkit-scrollbar-thumb { background: rgba(0, 170, 255, 0.3); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 170, 255, 0.55); }
+
+::selection { background: rgba(0, 170, 255, 0.35); color: #ffffff; }
+
+.markdown-body {
+  font-family: var(--font-share-tech-mono), monospace;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.4);
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  font-family: var(--font-cinzel), serif;
+  color: var(--accent-cyan);
+  letter-spacing: 0.06em;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
 }
-::-webkit-scrollbar-thumb {
-  background: rg
+
+.markdown-body h1 { font-size: 1.4rem; }
+.markdown-body h2 { font-size: 1.15rem; }
+.markdown-body h3 { font-size: 1rem; }
+.markdown-body h4 { font-size: 0.9rem; color: var(--accent-blue); }
+
+.markdown-body p { margin-bottom: 0.9rem; }
+.markdown-body strong { color: var(--accent-cyan); font-weight: 700; }
+.markdown-body em { color: var(--accent-steel); font-style: italic; }
+
+.markdown-body code {
+  background: rgba(0, 0, 0, 0.45);
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--border-faded);
+  font-size: 0.85em;
+  color: var(--accent-cyan);
+}
+
+.markdown-body pre {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border-faded);
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  margin: 0.9rem 0;
+}
+
+.markdown-body pre code { background: none; border: none; padding: 0; }
+
+.markdown-body blockquote {
+  margin: 0.9rem 0;
+  padding: 0.4rem 1rem;
+  border-left: 3px solid var(--accent-blue);
+  background: rgba(0, 170, 255, 0.05);
+  color: var(--accent-cyan);
+  font-style: italic;
+}
+
+.markdown-body ul, .markdown-body ol { margin: 0.6rem 0 0.9rem; padding-left: 1.4rem; }
+.markdown-body ul li { list-style: square; }
+.markdown-body ol li { list-style: decimal; }
+.markdown-body li::marker { color: var(--accent-blue); }
+
+.markdown-body a {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border-faded);
+  margin: 1.2rem 0;
+}
+
+.markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--border-faded);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+}
+.markdown-body th {
+  background: rgba(0, 170, 255, 0.08);
+  color: var(--accent-cyan);
+  font-family: var(--font-cinzel), serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
