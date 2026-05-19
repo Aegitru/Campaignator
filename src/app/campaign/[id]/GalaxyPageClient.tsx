@@ -31,7 +31,7 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
   const [pendingPlacement, setPendingPlacement] = useState<{ x: number; y: number } | null>(null);
 
   return (
-    <div className="relative w-full" style={{ height: "100dvh", overflow: "hidden" }}>
+    <div className="relative w-full" style={{ height: "100dvh" }}>
       {/* Galaxie : occupe TOUT l'ecran sous les overlays */}
       <div className="absolute inset-0 z-0">
         <GalaxyView

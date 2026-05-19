@@ -46,7 +46,7 @@ function SystemPageInner({ system, planets, data }: Props) {
   };
 
   return (
-    <div className="relative w-full" style={{ height: "100dvh", overflow: "hidden" }}>
+    <div className="relative w-full" style={{ height: "100dvh" }}>
       {/* Canvas plein ecran */}
       <div className="absolute inset-0 z-0">
         <SystemView system={system} planets={planets} onPlanetClick={navigateToPlanet} />

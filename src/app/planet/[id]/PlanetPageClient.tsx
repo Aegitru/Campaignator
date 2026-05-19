@@ -46,7 +46,7 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
   }, [zones, battles]);
 
   return (
-    <div className="relative w-full" style={{ height: "100dvh", overflow: "hidden" }}>
+    <div className="relative w-full" style={{ height: "100dvh" }}>
       <div className="absolute inset-0 z-0">
         <PlanetView planet={planet} zones={zones} factionById={factionById}
           battleCountByZone={battleCountByZone} onZoneClick={(z) => openZone(z.id)} />
