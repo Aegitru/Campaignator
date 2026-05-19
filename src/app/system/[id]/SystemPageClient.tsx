@@ -46,7 +46,8 @@ function SystemPageInner({ system, planets, data }: Props) {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col">
+    <div className="relative w-full" style={{ height: "100dvh", overflow: "hidden" }}>
+      {/* Canvas plein ecran */}
       <div className="absolute inset-0 z-0">
         <SystemView system={system} planets={planets} onPlanetClick={navigateToPlanet} />
         {transitioning && (
@@ -58,20 +59,20 @@ function SystemPageInner({ system, planets, data }: Props) {
       </div>
 
       {/* Header overlay top-left */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[300px]">
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2" style={{ maxWidth: "300px" }}>
         <Link href={data.isSeed ? "/" : `/campaign/${data.campaign.id}`}
           className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ {data.isSeed ? "ACCUEIL" : "GALAXIE"}
         </Link>
         <div className="hud-panel px-3 py-2 flex items-center gap-2">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="hud-label" style={{ fontSize: "0.55rem" }}>SYSTEME</div>
-            <div className="font-display text-sm tracking-widest" style={{ color: "var(--accent-cyan)" }}>
+            <div className="font-display text-base tracking-widest truncate" style={{ color: "var(--accent-cyan)" }}>
               {system.name}
             </div>
           </div>
-          <button onClick={() => setShowInfo(true)} className="hud-button"
-            style={{ padding: "0.3rem 0.55rem", fontSize: "0.85rem", lineHeight: 1 }}
+          <button onClick={() => setShowInfo(true)} className="hud-button flex-shrink-0"
+            style={{ padding: "0.4rem 0.6rem", fontSize: "1rem", lineHeight: 1 }}
             title="Informations">
             ⓘ
           </button>
@@ -84,22 +85,31 @@ function SystemPageInner({ system, planets, data }: Props) {
         )}
       </div>
 
+      {/* Footer overlay bottom-left */}
+      <div className="absolute bottom-6 left-6 z-20 flex items-center gap-4">
+        <div className="hud-label hud-pulse" style={{ color: "var(--accent-blue)" }}>◉ LINK ACTIVE</div>
+        <div className="hud-label">{planets.length} CORPS ORBITAUX DETECTES</div>
+        <div className="hud-label" style={{ color: "var(--text-faded)" }}>
+          {starTypeLabel(system.star_type)}
+        </div>
+      </div>
+
       {showInfo && (
         <SystemInfoModal
-          system={system}
-          planets={planets}
-          campaignId={data.campaign.id}
-          canEdit={editing}
-          onClose={() => setShowInfo(false)}
-        />
+          system={system} planets={planets} campaignId={data.campaign.id}
+          canEdit={editing} onClose={() => setShowInfo(false)} />
       )}
 
       {showCreatePlanet && (
         <QuickCreateModal
           mode={{ kind: "planet", campaignId: data.campaign.id, systemId: system.id }}
-          onClose={() => setShowCreatePlanet(false)}
-        />
+          onClose={() => setShowCreatePlanet(false)} />
       )}
     </div>
   );
+}
+
+function starTypeLabel(s: StellarSystem["star_type"]): string {
+  return ({ yellow_dwarf: "NAINE JAUNE", red_giant: "GEANTE ROUGE", white_dwarf: "NAINE BLANCHE",
+    neutron: "NEUTRONS", binary: "BINAIRE" } as const)[s];
 }

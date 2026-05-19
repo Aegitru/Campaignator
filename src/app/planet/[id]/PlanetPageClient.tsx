@@ -7,6 +7,7 @@ import PlanetView from "@/components/planet/PlanetView";
 import { CampaignProvider, useCampaign } from "@/lib/campaign-context";
 import { useSession } from "@/lib/session-context";
 import QuickCreateModal from "@/components/edit/QuickCreateModal";
+import PlanetInfoModal from "@/components/planet/PlanetInfoModal";
 import GlobalOverlays from "@/components/overlays/GlobalOverlays";
 import type { CampaignData } from "@/lib/fetch-campaign-data";
 
@@ -35,6 +36,7 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
   const { isCampaignUnlocked } = useSession();
   const editing = !data.isSeed && isCampaignUnlocked(data.campaign.id);
   const [showCreateZone, setShowCreateZone] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const factionById = useMemo(() => new Map(factions.map((f) => [f.id, f])), [factions]);
   const battleCountByZone = useMemo(() => {
@@ -44,23 +46,33 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
   }, [zones, battles]);
 
   return (
-    <div className="absolute inset-0 flex flex-col">
+    <div className="relative w-full" style={{ height: "100dvh", overflow: "hidden" }}>
       <div className="absolute inset-0 z-0">
         <PlanetView planet={planet} zones={zones} factionById={factionById}
           battleCountByZone={battleCountByZone} onZoneClick={(z) => openZone(z.id)} />
       </div>
 
       {/* Header overlay top-left */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[280px]">
-        <Link href={`/system/${systemId}`} className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2" style={{ maxWidth: "300px" }}>
+        <Link href={`/system/${systemId}`} className="hud-button"
+          style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ SYSTEME
         </Link>
-        <div className="hud-panel px-3 py-2">
-          <div className="hud-label" style={{ fontSize: "0.55rem" }}>PLANETE</div>
-          <div className="font-display text-sm tracking-widest" style={{ color: "var(--accent-cyan)" }}>{planet.name}</div>
-          <div className="hud-label mt-1" style={{ fontSize: "0.55rem", color: "var(--text-faded)" }}>
-            {planet.planet_type.toUpperCase()} · V{planet.variant}
+        <div className="hud-panel px-3 py-2 flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="hud-label" style={{ fontSize: "0.55rem" }}>PLANETE</div>
+            <div className="font-display text-base tracking-widest truncate" style={{ color: "var(--accent-cyan)" }}>
+              {planet.name}
+            </div>
+            <div className="hud-label mt-0.5" style={{ fontSize: "0.55rem", color: "var(--text-faded)" }}>
+              {planet.planet_type.toUpperCase()} · V{planet.variant}
+            </div>
           </div>
+          <button onClick={() => setShowInfo(true)} className="hud-button flex-shrink-0"
+            style={{ padding: "0.4rem 0.6rem", fontSize: "1rem", lineHeight: 1 }}
+            title="Informations">
+            ⓘ
+          </button>
         </div>
         {editing && (
           <button onClick={() => setShowCreateZone(true)} className="hud-button"
@@ -71,6 +83,19 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
           </button>
         )}
       </div>
+
+      {/* Footer overlay bottom-left */}
+      <div className="absolute bottom-6 left-6 z-20 flex items-center gap-4">
+        <div className="hud-label hud-pulse" style={{ color: "var(--accent-blue)" }}>◉ SURFACE SCAN</div>
+        <div className="hud-label">{zones.length} ZONE{zones.length > 1 ? "S" : ""} CARTOGRAPHIEE{zones.length > 1 ? "S" : ""}</div>
+        {planet.has_moon && <div className="hud-label" style={{ color: "var(--text-faded)" }}>1 LUNE</div>}
+      </div>
+
+      {showInfo && (
+        <PlanetInfoModal
+          planet={planet} zones={zones} campaignId={data.campaign.id}
+          canEdit={editing} onClose={() => setShowInfo(false)} />
+      )}
 
       {showCreateZone && (
         <QuickCreateModal mode={{ kind: "zone", campaignId: data.campaign.id, planetId: planet.id }}

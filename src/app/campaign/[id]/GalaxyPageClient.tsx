@@ -31,7 +31,7 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
   const [pendingPlacement, setPendingPlacement] = useState<{ x: number; y: number } | null>(null);
 
   return (
-    <div className="absolute inset-0 flex flex-col">
+    <div className="relative w-full" style={{ height: "100dvh", overflow: "hidden" }}>
       {/* Galaxie : occupe TOUT l'ecran sous les overlays */}
       <div className="absolute inset-0 z-0">
         <GalaxyView
@@ -48,7 +48,7 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
       </div>
 
       {/* Header flottant top-left */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 max-w-[260px]">
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2 max-w-[260px]">
         <Link href="/" className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ ACCUEIL
         </Link>

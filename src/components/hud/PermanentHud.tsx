@@ -43,7 +43,7 @@ export default function PermanentHud() {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-30 w-[360px] hud-panel hud-panel--strong" style={{ padding: "14px 16px" }}>
+    <div className="fixed top-6 right-6 z-30 w-[320px] max-w-[calc(100vw-3rem)] hud-panel hud-panel--strong" style={{ padding: "14px 16px" }}>
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="font-display text-sm tracking-widest truncate" style={{ color: "var(--accent-cyan)" }} title={campaign.name}>
           ◈ {campaign.name.toUpperCase()}
@@ -64,7 +64,7 @@ export default function PermanentHud() {
       <div className="hud-label mb-1 flex items-center justify-between">
         <span>STATUT</span>
         {editing && !editingStatus && (
-          <button onClick={() => setEditingStatus(true)} className="hover:text-white" style={{ cursor: "crosshair", fontSize: "0.8em" }}>✎</button>
+          <button onClick={() => setEditingStatus(true)} aria-label="Modifier le statut" className="hud-button" style={{ padding: "0.2rem 0.45rem", fontSize: "0.85rem", lineHeight: 1, cursor: "crosshair" }}>✎</button>
         )}
       </div>
       {editingStatus ? (
