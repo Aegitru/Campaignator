@@ -168,3 +168,11 @@ export async function checkCampaignPassword(
   if (error || !data) return false;
   return data.password_hash === passwordHash;
 }
+
+/** Fetch all units for the given faction ids. */
+export async function listUnitsForFactions(factionIds: string[]) {
+  if (factionIds.length === 0) return [];
+  const sb = supabaseServer();
+  const { data } = await sb.from("faction_units").select("*").in("faction_id", factionIds);
+  return (data ?? []) as { id: string; faction_id: string; name: string; description: string; evolution_notes: string }[];
+}

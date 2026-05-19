@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiEditCall } from "@/lib/api-edit";
 
 type Mode =
-  | { kind: "system"; campaignId: string }
+  | { kind: "system"; campaignId: string; posX?: number; posY?: number }
   | { kind: "planet"; campaignId: string; systemId: string }
   | { kind: "zone"; campaignId: string; planetId: string };
 
@@ -33,7 +33,7 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
     let res: any;
     if (mode.kind === "system") {
       res = await apiEditCall("/api/systems", "POST", mode.campaignId, {
-        name: name.trim(), star_type: starType, galaxy_pos_x: 50, galaxy_pos_y: 50, lore_text: "",
+        name: name.trim(), star_type: starType, galaxy_pos_x: mode.posX ?? 50, galaxy_pos_y: mode.posY ?? 50, lore_text: "",
       });
     } else if (mode.kind === "planet") {
       res = await apiEditCall("/api/planets", "POST", mode.campaignId, {
