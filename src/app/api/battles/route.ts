@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabase/server";
+import { authorize, resolveCampaignIdFromZone, resolveCampaignIdFromBattle } from "../_helpers";
+
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
+  const { zoneId, password, ...payload } = body;
+  const cid = await resolveCampaignIdFromZone(zoneId);
+  if (!cid || !(await authorize(cid, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const sb = supabaseServer();
+  const { data, error } = await sb.from("battles").insert({ zone_id: zoneId, ...payload }).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
+export async function PUT(req: Request) {
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
+  const { id, password, ...updates } = body;
+  const cid = await resolveCampaignIdFromBattle(id);
+  if (!cid || !(await authorize(cid, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const sb = supabaseServer();
+  const { data, error } = await sb.from("battles").update(updates).eq("id", id).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
+export async function DELETE(req: Request) {
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
+  const { id, password } = body;
+  const cid = await resolveCampaignIdFromBattle(id);
+  if (!cid || !(await authorize(cid, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const sb = supabaseServer();
+  const { error } = await sb.from("battles").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

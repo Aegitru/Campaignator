@@ -4,6 +4,7 @@ import "./globals.css";
 import Starfield from "@/components/visual/Starfield";
 import CampaignSeedProvider from "@/components/providers/CampaignSeedProvider";
 import GlobalOverlays from "@/components/overlays/GlobalOverlays";
+import { SessionProvider } from "@/lib/session-context";
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
@@ -36,10 +37,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col relative">
         <Starfield />
-        <CampaignSeedProvider>
-          <main className="relative z-10 flex-1 flex flex-col">{children}</main>
-          <GlobalOverlays />
-        </CampaignSeedProvider>
+        <SessionProvider>
+          <CampaignSeedProvider>
+            <main className="relative z-10 flex-1 flex flex-col">{children}</main>
+            <GlobalOverlays />
+          </CampaignSeedProvider>
+        </SessionProvider>
       </body>
     </html>
   );

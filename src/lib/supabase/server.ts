@@ -1,14 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/supabase";
 
 /**
- * Client Supabase pour Server Actions / Route Handlers.
- * Utilise la service_role key — JAMAIS exposer côté client.
+ * Client Supabase serveur. Type lache (any) car notre schema Database custom
+ * casse les Insert/Update genere par supabase-js. On preferera la simplicite ici.
  */
 export function supabaseServer() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createClient<Database>(url, serviceKey, {
+  return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
