@@ -36,13 +36,11 @@ function SystemPageInner({ system, planets, data }: Props) {
   const { isCampaignUnlocked } = useSession();
   const editing = !data.isSeed && isCampaignUnlocked(data.campaign.id);
 
-  const [transitioning, setTransitioning] = useState<Planet | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showCreatePlanet, setShowCreatePlanet] = useState(false);
 
   const navigateToPlanet = (p: Planet) => {
-    setTransitioning(p);
-    setTimeout(() => router.push(`/planet/${p.id}`), 480);
+    router.push(`/planet/${p.id}`);
   };
 
   return (
@@ -50,12 +48,6 @@ function SystemPageInner({ system, planets, data }: Props) {
       {/* Canvas plein ecran */}
       <div className="absolute inset-0 z-0">
         <SystemView system={system} planets={planets} onPlanetClick={navigateToPlanet} />
-        {transitioning && (
-          <div className="absolute inset-0 pointer-events-none" style={{
-            background: "radial-gradient(circle at center, rgba(127, 223, 255, 0.0) 0%, rgba(127, 223, 255, 0.06) 30%, rgba(5, 10, 25, 0.95) 70%)",
-            animation: "warp-zoom 0.5s ease-in forwards",
-          }} />
-        )}
       </div>
 
       {/* Header overlay top-left */}
