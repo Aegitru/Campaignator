@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Cinzel, Share_Tech_Mono } from "next/font/google";
 import "./globals.css";
 import Starfield from "@/components/visual/Starfield";
+import CampaignSeedProvider from "@/components/providers/CampaignSeedProvider";
+import GlobalOverlays from "@/components/overlays/GlobalOverlays";
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
@@ -18,9 +20,8 @@ const shareTechMono = Share_Tech_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WH40K — Campaign Tracker",
-  description:
-    "Journal de bord narratif pour campagne Warhammer 40 000.",
+  title: "WH40K - Campaign Tracker",
+  description: "Journal de bord narratif pour campagne Warhammer 40 000.",
 };
 
 export default function RootLayout({
@@ -34,9 +35,11 @@ export default function RootLayout({
       className={`${cinzel.variable} ${shareTechMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col relative">
-        {/* Global starfield — monté une seule fois, fixe derrière tout */}
         <Starfield />
-        <main className="relative z-10 flex-1 flex flex-col">{children}</main>
+        <CampaignSeedProvider>
+          <main className="relative z-10 flex-1 flex flex-col">{children}</main>
+          <GlobalOverlays />
+        </CampaignSeedProvider>
       </body>
     </html>
   );

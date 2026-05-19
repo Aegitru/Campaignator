@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Planet, StellarSystem } from "@/types/domain";
 import SystemView from "@/components/system/SystemView";
@@ -16,8 +17,17 @@ export default function SystemPageClient({
   planets,
   campaignName,
 }: Props) {
-  const [selected, setSelected] = useState<Planet | null>(null);
+  const router = useRouter();
+  const [transitioning, setTransitioning] = useState<Planet | null>(null);
   const [loreOpen, setLoreOpen] = useState(true);
+
+  const navigateToPlanet = (p: Planet) => {
+    setTransitioning(p);
+    // Petit délai pour laisser l'animation de zoom se jouer
+    setTimeout(() => {
+      router.push(`/planet/${p.id}`);
+    }, 480);
+  };
 
   return (
     <div className="flex-1 flex flex-col relative min-h-[100dvh]">
@@ -133,8 +143,19 @@ export default function SystemPageClient({
           <SystemView
             system={system}
             planets={planets}
-            onPlanetClick={(p) => setSelected(p)}
+            onPlanetClick={navigateToPlanet}
           />
+          {/* Transition zoom : voile qui s'agrandit depuis le centre */}
+          {transitioning && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(127, 223, 255, 0.0) 0%, rgba(127, 223, 255, 0.06) 30%, rgba(5, 10, 25, 0.95) 70%)",
+                animation: "warp-zoom 0.5s ease-in forwards",
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -157,46 +178,6 @@ export default function SystemPageClient({
         </div>
       </footer>
 
-      {/* ===================== Modal de sélection planète (provisoire V2) ===================== */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="hud-panel hud-panel--strong p-6 max-w-md text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="hud-label mb-2">PLANETARY_RECORD</div>
-            <h3
-              className="font-display text-2xl mb-2"
-              style={{ color: "var(--accent-cyan)" }}
-            >
-              {selected.name}
-            </h3>
-            <p
-              className="font-mono text-xs mb-4"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {planetTypeLabel(selected.planet_type)} · Variante{" "}
-              {selected.variant} · Orbite {selected.orbit_index}
-            </p>
-            <p
-              className="font-mono text-xs mb-6"
-              style={{ color: "var(--text-faded)" }}
-            >
-              La Vue Planète (zones hexagonales, rapports de bataille) arrive
-              en V2.
-            </p>
-            <button
-              className="hud-button"
-              onClick={() => setSelected(null)}
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -213,14 +194,3 @@ function starTypeLabel(s: StellarSystem["star_type"]): string {
   )[s];
 }
 
-function planetTypeLabel(t: Planet["planet_type"]): string {
-  return (
-    {
-      rocky: "Monde rocheux",
-      gaseous: "Géante gazeuse",
-      oceanic: "Monde océanique",
-      dead: "Monde mort",
-      fortress: "Monde-forteresse",
-    } as const
-  )[t];
-}
