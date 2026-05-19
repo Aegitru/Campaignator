@@ -43,7 +43,20 @@ export default function PermanentHud() {
   };
 
   return (
-    <div className="fixed top-6 right-6 z-30 w-[320px] max-w-[calc(100vw-3rem)] hud-panel hud-panel--strong" style={{ padding: "14px 16px" }}>
+    <div
+      className="hud-panel hud-panel--strong"
+      style={{
+        position: "fixed",
+        top: "1.5rem",
+        right: "1.5rem",
+        bottom: "auto",
+        left: "auto",
+        zIndex: 50,
+        width: "320px",
+        maxWidth: "calc(100vw - 3rem)",
+        padding: "14px 16px",
+      }}
+    >
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="font-display text-sm tracking-widest truncate" style={{ color: "var(--accent-cyan)" }} title={campaign.name}>
           ◈ {campaign.name.toUpperCase()}
@@ -138,6 +151,4 @@ function ForceBar({ segments }: { segments: { id: string; color: string; victori
 
 function darken(hex: string, amount: number): string {
   const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16); const g = parseInt(h.slice(2, 4), 16); const b = parseInt(h.slice(4, 6), 16);
-  return `rgb(${Math.floor(r * (1 - amount))}, ${Math.floor(g * (1 - amount))}, ${Math.floor(b * (1 - amount))})`;
-}
+  const r = parseInt(h.slice(0, 2), 16); const g = parseInt
