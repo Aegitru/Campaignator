@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { checkCampaignPassword } from "@/lib/supabase-queries";
 import { hashPassword, generateSessionToken } from "@/lib/auth";

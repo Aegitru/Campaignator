@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { authorize, resolveCampaignIdFromPlanet } from "../_helpers";
