@@ -48,13 +48,13 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
       </div>
 
       {/* Header flottant top-left */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2 max-w-[260px]">
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2 max-w-[380px]">
         <Link href="/" className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ ACCUEIL
         </Link>
-        <div className="hud-panel px-3 py-2">
-          <div className="hud-label" style={{ fontSize: "0.55rem" }}>VUE GALAXIE</div>
-          <div className="font-display text-sm tracking-widest" style={{ color: "var(--accent-cyan)" }}>
+        <div className="hud-panel px-4 py-3">
+          <div className="hud-label" style={{ fontSize: "0.7rem" }}>VUE GALAXIE</div>
+          <div className="font-display text-lg tracking-widest" style={{ color: "var(--accent-cyan)" }}>
             {bundle.systems.length} SECTEUR{bundle.systems.length > 1 ? "S" : ""}
           </div>
         </div>

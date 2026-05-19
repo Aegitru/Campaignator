@@ -53,23 +53,23 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
       </div>
 
       {/* Header overlay top-left */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2" style={{ maxWidth: "300px" }}>
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2" style={{ maxWidth: "380px" }}>
         <Link href={`/system/${systemId}`} className="hud-button"
           style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ SYSTEME
         </Link>
-        <div className="hud-panel px-3 py-2 flex items-center gap-2">
+        <div className="hud-panel px-4 py-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <div className="hud-label" style={{ fontSize: "0.55rem" }}>PLANETE</div>
-            <div className="font-display text-base tracking-widest truncate" style={{ color: "var(--accent-cyan)" }}>
+            <div className="hud-label" style={{ fontSize: "0.7rem" }}>PLANETE</div>
+            <div className="font-display text-xl tracking-widest truncate" style={{ color: "var(--accent-cyan)" }}>
               {planet.name}
             </div>
-            <div className="hud-label mt-0.5" style={{ fontSize: "0.55rem", color: "var(--text-faded)" }}>
+            <div className="hud-label mt-0.5" style={{ fontSize: "0.7rem", color: "var(--text-faded)" }}>
               {planet.planet_type.toUpperCase()} · V{planet.variant}
             </div>
           </div>
           <button onClick={() => setShowInfo(true)} className="hud-button flex-shrink-0"
-            style={{ padding: "0.4rem 0.6rem", fontSize: "1rem", lineHeight: 1 }}
+            style={{ padding: "0.5rem 0.75rem", fontSize: "1.25rem", lineHeight: 1 }}
             title="Informations">
             ⓘ
           </button>
