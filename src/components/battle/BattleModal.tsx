@@ -60,7 +60,7 @@ export default function BattleModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8"
       style={{ background: "rgba(0, 0, 0, 0.72)", backdropFilter: "blur(6px)" }}
       onClick={closeBattle}
     >
@@ -106,7 +106,24 @@ export default function BattleModal() {
                 </span>
               </span>
             )}
-            {isDraw ? (
+            {(battle as any).participating_faction_ids?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 w-full">
+              <span className="hud-label" style={{ fontSize: "0.6rem" }}>PARTICIPANTES :</span>
+              {((battle as any).participating_faction_ids as string[]).map((fid: string) => {
+                const f = factions.find((x) => x.id === fid);
+                if (!f) return null;
+                return (
+                  <span key={fid} className="font-mono text-[10px] px-2 py-0.5 flex items-center gap-1"
+                    style={{ background: hexAlpha(f.color_hex, 0.15), border: `1px solid ${f.color_hex}55`, color: "#ffffff" }}>
+                    <span className="inline-block w-1.5 h-1.5" style={{ background: f.color_hex }} />
+                    {f.name}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {isDraw ? (
               <span
                 className="font-mono text-xs px-2.5 py-1"
                 style={{
@@ -177,7 +194,7 @@ export default function BattleModal() {
       {/* Lightbox */}
       {lightboxIndex !== null && photos[lightboxIndex] && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center"
+          className="fixed inset-0 z-[70] flex items-center justify-center"
           style={{ background: "rgba(0, 0, 0, 0.92)" }}
           onClick={() => setLightboxIndex(null)}
         >

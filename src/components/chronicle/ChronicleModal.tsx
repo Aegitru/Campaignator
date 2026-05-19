@@ -41,9 +41,9 @@ export default function ChronicleModal() {
         onClick={(e) => e.stopPropagation()} style={{ padding: 0 }}>
         <div className="px-6 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-faded)" }}>
           <div>
-            <div className="hud-label mb-1">CAMPAIGN_CHRONICLE</div>
+            <div className="hud-label mb-1">CHRONIQUES</div>
             <h2 className="font-display text-2xl tracking-wide" style={{ color: "var(--accent-cyan)" }}>
-              Chronologie de la Croisade
+              Chroniques de la Croisade
             </h2>
           </div>
           <button onClick={closeChronicle} className="hud-button" style={{ padding: "0.4rem 0.7rem", fontSize: "0.75rem" }}>

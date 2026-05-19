@@ -156,6 +156,7 @@ export default function ZonePanel() {
         <BattleEditor zoneId={zone.id} campaignId={campaign.id} existing={{
           id: editingBattle.id, title: editingBattle.title, battle_date: editingBattle.battle_date,
           narrative_text: editingBattle.narrative_text, winning_faction_id: editingBattle.winning_faction_id,
+          participating_faction_ids: (editingBattle as any).participating_faction_ids ?? [],
         }} onClose={() => setEditBattleId(null)} />
       )}
     </>

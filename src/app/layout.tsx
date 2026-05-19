@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Cinzel, Share_Tech_Mono } from "next/font/google";
 import "./globals.css";
 import Starfield from "@/components/visual/Starfield";
-import CampaignSeedProvider from "@/components/providers/CampaignSeedProvider";
-import GlobalOverlays from "@/components/overlays/GlobalOverlays";
 import { SessionProvider } from "@/lib/session-context";
 
 const cinzel = Cinzel({
@@ -31,17 +29,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      className={`${cinzel.variable} ${shareTechMono.variable} h-full antialiased`}
-    >
+    <html lang="fr" className={`${cinzel.variable} ${shareTechMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col relative">
         <Starfield />
         <SessionProvider>
-          <CampaignSeedProvider>
-            <main className="relative z-10 flex-1 flex flex-col">{children}</main>
-            <GlobalOverlays />
-          </CampaignSeedProvider>
+          <main className="relative z-10 flex-1 flex flex-col">{children}</main>
         </SessionProvider>
       </body>
     </html>

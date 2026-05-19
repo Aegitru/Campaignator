@@ -73,6 +73,8 @@ export const seedBattles: Battle[] = [
     battle_date: "2026-04-12",
     narrative_text: md("## Preambule\n\nAux premieres lueurs de l'aube, les **Ultramarines** deployerent leurs forces sur la plaine de Kral-Veth, determines a reprendre les ruines tombees aux mains de l'ennemi.\n\n## Deroulement\n\nLes Sergents tactiques menerent l'assaut, soutenus par un Dreadnought ancestral. Les premieres lignes du Chaos cederent en quelques heures.\n\n> Pour Guilliman ! Pour Macragge !\n\n## Issue\n\nVictoire ecrasante des forces loyalistes. Le terrain est securise temporairement."),
     winning_faction_id: "faction-ultramarines",
+
+    participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
     created_at: "2026-04-12T08:00:00Z",
   },
   {
@@ -80,6 +82,8 @@ export const seedBattles: Battle[] = [
     battle_date: "2026-05-03",
     narrative_text: md("## Preambule\n\nQuelques semaines apres l'Assaut de l'Aube, **Mortarion lui-meme** envoya ses Death Guard reprendre la position.\n\n## Deroulement\n\nUne maree de Plague Marines submergea les defenses imperiales. Le brouillard de spores rendit l'air irrespirable. Les Dreadnoughts furent corrodes un a un.\n\n## Issue\n\nVictoire totale des forces du Chaos. Kral-Veth est desormais souillee de pourriture pour des siecles."),
     winning_faction_id: "faction-deathguard",
+
+    participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
     created_at: "2026-05-03T20:00:00Z",
   },
   {
@@ -87,6 +91,8 @@ export const seedBattles: Battle[] = [
     battle_date: "2026-03-22",
     narrative_text: md("## Preambule\n\nLa Citadelle d'Or, vestige d'un age oublie, fut le theatre d'une attaque surprise des Death Guard.\n\n## Deroulement\n\nLes murs millenaires tinrent bon. Les Ultramarines, retranches, repousserent assaut apres assaut grace a un usage habile de l'artillerie *Thunderfire*.\n\n## Issue\n\n**Victoire imperiale**. La Citadelle reste un bastion loyaliste."),
     winning_faction_id: "faction-ultramarines",
+
+    participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
     created_at: "2026-03-22T14:00:00Z",
   },
   {
@@ -94,6 +100,8 @@ export const seedBattles: Battle[] = [
     battle_date: "2026-02-15",
     narrative_text: md("## Preambule\n\nUne force expeditionnaire ultramarine penetra la Necropole pour neutraliser un sanctuaire pestilentiel.\n\n## Deroulement\n\nLes couloirs etroits annulerent l'avantage technologique imperial. Les Plague Marines surgirent des cryptes, accompagnes d'essaims de mouches geantes.\n\n## Issue\n\nRetrait strategique des Ultramarines. La Necropole reste sous controle du Chaos."),
     winning_faction_id: "faction-deathguard",
+
+    participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
     created_at: "2026-02-15T22:00:00Z",
   },
   {
@@ -101,6 +109,8 @@ export const seedBattles: Battle[] = [
     battle_date: "2026-01-08",
     narrative_text: md("## Preambule\n\nUne patrouille mecanisee ultramarine fut piegee au pied du Pic de Cendre.\n\n## Deroulement\n\nVolees d'artillerie, contre-attaques au corps-a-corps. Les pertes furent lourdes des deux cotes.\n\n## Issue\n\n**Match nul**. Aucune faction ne consolida sa position apres cet engagement."),
     winning_faction_id: null,
+
+    participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
     created_at: "2026-01-08T10:00:00Z",
   },
   {
@@ -108,6 +118,8 @@ export const seedBattles: Battle[] = [
     battle_date: "2026-04-28",
     narrative_text: md("## Preambule\n\nLes Ultramarines debarquerent sur l'Archipel pour liberer une colonie civile assiegee.\n\n## Deroulement\n\nLes Stormhawks imperiaux dominerent les cieux. Une operation combinee mer-air-terre devasta les positions ennemies.\n\n## Issue\n\n**Victoire totale**. La colonie est sauvee, l'archipel securise."),
     winning_faction_id: "faction-ultramarines",
+
+    participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
     created_at: "2026-04-28T06:00:00Z",
   },
 ];

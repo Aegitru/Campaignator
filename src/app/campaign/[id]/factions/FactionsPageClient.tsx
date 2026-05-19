@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CampaignProvider } from "@/lib/campaign-context";
 import { useSession } from "@/lib/session-context";
 import { apiEditCall } from "@/lib/api-edit";
+import GlobalOverlays from "@/components/overlays/GlobalOverlays";
 import type { CampaignBundle } from "@/lib/supabase-queries";
 
 interface Unit { id: string; faction_id: string; name: string; description: string; evolution_notes: string }
@@ -17,6 +18,7 @@ export default function FactionsPageClient({ bundle, units }: { bundle: Campaign
       systems: bundle.systems, planets: bundle.planets, zones: bundle.zones, battles: bundle.battles,
     }}>
       <FactionsInner bundle={bundle} units={units} />
+      <GlobalOverlays />
     </CampaignProvider>
   );
 }

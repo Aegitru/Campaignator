@@ -23,7 +23,7 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
   const [variant, setVariant] = useState(1);
   const [orbitIndex, setOrbitIndex] = useState(1);
   const [hasMoon, setHasMoon] = useState(false);
-  const [angle, setAngle] = useState(0);
+  const angle = Math.floor(Math.random() * 360);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 

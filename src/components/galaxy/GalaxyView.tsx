@@ -14,8 +14,8 @@ interface Props {
 
 interface CanvasStar { x: number; y: number; r: number; baseOpacity: number; armIdx: number }
 
-const STAR_COUNT_PER_ARM = 800;
-const ARMS = 2;
+const STAR_COUNT_PER_ARM = 600;
+const ARMS = 4;
 
 export default function GalaxyView({
   systems, onSystemClick, editing, placingMode, onPlace, onMoveSystem,

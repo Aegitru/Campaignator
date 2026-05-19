@@ -33,4 +33,32 @@ Voir `.env.example`. Trois sources de configuration :
 
 ## Base de données
 
-Migration unique dans `supabase/migrations/0001_init.sql`. À exécuter via le SQL Editor de Supabase 
+Migration unique dans `supabase/migrations/0001_init.sql`. À exécuter via le SQL Editor de Supabase la première fois.
+
+## Plan de versions
+
+- V1 (en cours) Fondations visuelles : étoile + planètes en orbite, palette HUD, données seed
+- V2 Navigation lecture seule : vue Planète, panel Zone, modal Rapport de bataille
+- V3 Auth & édition : mot de passe SHA-256, formulaires, upload Cloudinary
+- V4 Vue Galaxie multi-systèmes
+- V5 Multi-campagnes + gestion factions
+- V6 Polish (lunes, filtres, transitions warp)
+
+## Structure
+
+```
+src/
+├── app/                  # Routes Next.js (App Router)
+├── components/
+│   ├── system/           # Vue Système (canvas)
+│   └── visual/           # Starfield global
+├── lib/
+│   ├── seed.ts           # Mock data V1
+│   ├── planet-textures.ts
+│   ├── star-render.ts
+│   └── supabase/         # Clients (browser + server)
+└── types/                # Types métier
+supabase/
+└── migrations/
+    └── 0001_init.sql     # Schéma complet
+```

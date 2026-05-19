@@ -84,6 +84,7 @@ export interface Battle {
   battle_date: string;
   narrative_text: string;
   winning_faction_id: string | null;
+  participating_faction_ids: string[];
   created_at: string;
 }
 
