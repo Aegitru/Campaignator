@@ -7,7 +7,7 @@ import { authorize, resolveCampaignIdFromPlanet, resolveCampaignIdFromZone } fro
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
-  const { planetId, password, ...payload } = body;
+  const { planetId, password, campaignId: _cid1, ...payload } = body;
   const cid = await resolveCampaignIdFromPlanet(planetId);
   if (!cid || !(await authorize(cid, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const sb = supabaseServer();
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
-  const { id, password, ...updates } = body;
+  const { id, password, campaignId: _cid2, ...updates } = body;
   const cid = await resolveCampaignIdFromZone(id);
   if (!cid || !(await authorize(cid, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const sb = supabaseServer();
