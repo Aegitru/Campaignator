@@ -272,11 +272,13 @@ export default function SystemView({
 }
 
 function planetTypeLabel(t: Planet["planet_type"]): string {
-  return (
-    {
-      rocky: "Monde rocheux",
-      gaseous: "Géante gazeuse",
-      oceanic: "Monde océanique",
-      dead: "Monde mort",
-      fortress: "Monde-forteresse",
-      other: "Objet
+  const labels: Record<Planet["planet_type"], string> = {
+    rocky: "Monde rocheux",
+    gaseous: "Geante gazeuse",
+    oceanic: "Monde oceanique",
+    dead: "Monde mort",
+    fortress: "Monde-forteresse",
+    other: "Objet spatial",
+  };
+  return labels[t];
+}
