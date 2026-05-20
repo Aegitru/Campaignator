@@ -41,15 +41,16 @@ export default function SystemView({
 
   // Précalculer les paramètres d'orbite stables par planète (mémoïsés sur l'id)
   const planetStates = useMemo<PlanetState[]>(() => {
-    const sorted = [...planets].sort((a, b) => a.orbit_index - b.orbit_index);
+    const topLevel = planets.filter((p) => !p.parent_planet_id);
+    const sorted = [...topLevel].sort((a, b) => a.orbit_index - b.orbit_index);
     const maxOrbit = Math.max(1, ...sorted.map((p) => p.orbit_index));
     const minDim = Math.min(size.w, size.h);
-    const innerR = minDim * 0.13;
-    const outerR = minDim * 0.46;
+    const innerR = minDim * 0.12;
+    const outerR = minDim * 0.62;
 
     return sorted.map((p, idx) => {
       const t = maxOrbit > 1 ? (p.orbit_index - 1) / (maxOrbit - 1) : 0;
-      const orbitRadiusX = innerR + (outerR - innerR) * (0.15 + 0.85 * t);
+      const orbitRadiusX = innerR + (outerR - innerR) * (0.1 + 0.55 * t + 0.35 * t * t);
       const orbitRadiusY = orbitRadiusX * (0.42 + (idx % 3) * 0.04);
       const orbitTilt = -0.08 + (idx % 2) * -0.05;
       const seed = hashString(p.id);
@@ -142,7 +143,7 @@ export default function SystemView({
       positions.clear();
       for (const ps of planetStates) {
         const orbitalT =
-          time * 0.0002 * ps.planet.orbit_speed + ps.orbitPhase;
+          time * 0.00006 * ps.planet.orbit_speed + ps.orbitPhase;
         const ex = Math.cos(orbitalT) * ps.orbitRadiusX;
         const ey = Math.sin(orbitalT) * ps.orbitRadiusY;
         // Tilt
@@ -152,22 +153,18 @@ export default function SystemView({
 
         drawPlanet(ctx, px, py, ps.planetRadius, ps.planet.planet_type, ps.planet.variant, ps.seed, time);
 
-        // Lune
-        if (ps.planet.has_moon) {
-          const moonOrbitR = ps.planetRadius * 2.2;
-          const moonAngle = time * 0.0015 + ps.orbitPhase * 2;
+        // Lunes (planetes filles)
+        const moons = planets.filter((m) => m.parent_planet_id === ps.planet.id);
+        moons.forEach((moon, mi) => {
+          const moonOrbitR = ps.planetRadius * (1.8 + mi * 1.0);
+          const moonSpeed = (0.0005 + mi * 0.0002) * moon.orbit_speed;
+          const moonAngle = time * moonSpeed + ps.orbitPhase * 2 + mi * 1.7;
           const mx = px + Math.cos(moonAngle) * moonOrbitR;
-          const my = py + Math.sin(moonAngle) * moonOrbitR * 0.7;
-          drawPlanet(
-            ctx,
-            mx,
-            my,
-            Math.max(4, ps.planetRadius * 0.32),
-            "rocky",
-            2,
-            ps.seed + 1
-          );
-        }
+          const my = py + Math.sin(moonAngle) * moonOrbitR * 0.6;
+          const mr = Math.max(5, ps.planetRadius * 0.35);
+          drawPlanet(ctx, mx, my, mr, moon.planet_type, moon.variant, hashString(moon.id), time);
+          positions.set(moon.id, { x: mx, y: my, r: mr });
+        });
 
         positions.set(ps.planet.id, { x: px, y: py, r: ps.planetRadius });
 
@@ -201,13 +198,13 @@ export default function SystemView({
 
   const planetAt = (px: number, py: number): Planet | null => {
     const map = hitMapRef.current;
-    for (const ps of planetStates) {
-      const pos = map.get(ps.planet.id);
+    for (const planet of planets) {
+      const pos = map.get(planet.id);
       if (!pos) continue;
       const dx = px - pos.x;
       const dy = py - pos.y;
       if (Math.sqrt(dx * dx + dy * dy) <= pos.r + 4) {
-        return ps.planet;
+        return planet;
       }
     }
     return null;

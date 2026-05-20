@@ -3,26 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiEditCall } from "@/lib/api-edit";
+import PortalToBody from "@/components/overlays/PortalToBody";
 
 type Mode =
   | { kind: "system"; campaignId: string; posX?: number; posY?: number }
   | { kind: "planet"; campaignId: string; systemId: string }
+  | { kind: "moon"; campaignId: string; parentPlanetId: string; systemId: string }
   | { kind: "zone"; campaignId: string; planetId: string };
 
 interface Props { mode: Mode; onClose: () => void }
 
 const STAR_TYPES = ["yellow_dwarf", "red_giant", "white_dwarf", "neutron", "binary"];
-const PLANET_TYPES = ["rocky", "gaseous", "oceanic", "dead", "fortress"];
+const PLANET_TYPES = ["rocky", "gaseous", "oceanic", "dead", "fortress", "other"];
 const VARIANTS = [1, 2, 3, 4];
 
-export default function QuickCreateModal({ mode, onClose }: Props) {
+export default function QuickCreateModal(props: Props) {
+  return (
+    <PortalToBody>
+      <Inner {...props} />
+    </PortalToBody>
+  );
+}
+
+function Inner({ mode, onClose }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [starType, setStarType] = useState("yellow_dwarf");
   const [planetType, setPlanetType] = useState("rocky");
   const [variant, setVariant] = useState(1);
   const [orbitIndex, setOrbitIndex] = useState(1);
-  const [hasMoon, setHasMoon] = useState(false);
   const angle = Math.floor(Math.random() * 360);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +39,7 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
   const submit = async () => {
     if (!name.trim()) { setError("Nom requis"); return; }
     setSubmitting(true); setError(null);
-    let res: any;
+    let res: { ok: boolean; data?: { id?: string }; error?: string };
     if (mode.kind === "system") {
       res = await apiEditCall("/api/systems", "POST", mode.campaignId, {
         name: name.trim(), star_type: starType, galaxy_pos_x: mode.posX ?? 50, galaxy_pos_y: mode.posY ?? 50, lore_text: "",
@@ -38,7 +47,13 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
     } else if (mode.kind === "planet") {
       res = await apiEditCall("/api/planets", "POST", mode.campaignId, {
         systemId: mode.systemId, name: name.trim(), planet_type: planetType, variant,
-        orbit_index: orbitIndex, orbit_speed: Math.max(0.2, 1.2 - orbitIndex * 0.18), has_moon: hasMoon,
+        orbit_index: orbitIndex, orbit_speed: Math.max(0.2, 1.2 - orbitIndex * 0.18), has_moon: false, parent_planet_id: null,
+      });
+    } else if (mode.kind === "moon") {
+      res = await apiEditCall("/api/planets", "POST", mode.campaignId, {
+        systemId: mode.systemId, name: name.trim(), planet_type: planetType, variant,
+        orbit_index: orbitIndex, orbit_speed: Math.max(0.4, 1.5 - orbitIndex * 0.3), has_moon: false,
+        parent_planet_id: mode.parentPlanetId,
       });
     } else {
       res = await apiEditCall("/api/zones", "POST", mode.campaignId, {
@@ -52,10 +67,14 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
   };
 
   const title = mode.kind === "system" ? "Nouveau secteur stellaire"
-    : mode.kind === "planet" ? "Nouvelle planète" : "Nouvelle zone";
+    : mode.kind === "planet" ? "Nouvelle planète"
+    : mode.kind === "moon" ? "Nouvelle lune"
+    : "Nouvelle zone";
+
+  const isPlanetary = mode.kind === "planet" || mode.kind === "moon";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }} onClick={onClose}>
       <div className="hud-panel hud-panel--strong max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
         <div className="hud-label mb-1">CRÉATION</div>
@@ -80,7 +99,7 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
             </div>
           )}
 
-          {mode.kind === "planet" && (
+          {isPlanetary && (
             <>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -100,21 +119,16 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <div className="hud-label mb-1">ORBITE (1-9)</div>
-                  <input type="number" min={1} max={9} value={orbitIndex} onChange={(e) => setOrbitIndex(+e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border font-mono text-sm focus:outline-none"
-                    style={{ borderColor: "var(--border-glow)", color: "var(--text-primary)" }} />
-                </div>
-                <label className="flex items-center gap-2 mt-6 font-mono text-xs" style={{ color: "var(--text-primary)" }}>
-                  <input type="checkbox" checked={hasMoon} onChange={(e) => setHasMoon(e.target.checked)} />
-                  AVEC LUNE
-                </label>
+              <div>
+                <div className="hud-label mb-1">{mode.kind === "moon" ? "ORBITE LUNAIRE (1-3)" : "ORBITE (1-9)"}</div>
+                <input type="number"
+                  min={1} max={mode.kind === "moon" ? 3 : 9}
+                  value={orbitIndex} onChange={(e) => setOrbitIndex(+e.target.value)}
+                  className="w-full px-3 py-2 bg-black/40 border font-mono text-sm focus:outline-none"
+                  style={{ borderColor: "var(--border-glow)", color: "var(--text-primary)" }} />
               </div>
             </>
           )}
-
         </div>
 
         {error && (
@@ -129,7 +143,7 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
           </button>
           <button onClick={submit} disabled={submitting} className="hud-button"
             style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem", background: "rgba(127,223,255,0.2)" }}>
-            {submitting ? "..." : "CREER ▸"}
+            {submitting ? "..." : "CRÉER ▸"}
           </button>
         </div>
       </div>

@@ -10,7 +10,7 @@ export type StarType =
   | "neutron"
   | "binary";
 
-export type PlanetType = "rocky" | "gaseous" | "oceanic" | "dead" | "fortress";
+export type PlanetType = "rocky" | "gaseous" | "oceanic" | "dead" | "fortress" | "other";
 export type PlanetVariant = 1 | 2 | 3 | 4;
 
 export interface Campaign {
@@ -68,6 +68,7 @@ export interface Planet {
   orbit_index: number;
   orbit_speed: number;
   has_moon: boolean;
+  parent_planet_id: string | null;
 }
 
 export interface Zone {

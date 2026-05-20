@@ -84,7 +84,7 @@ export default function PlanetView({
 
       if (planet.has_moon) {
         const moonOrbitR = planetR * 1.45;
-        const a = time * 0.0006;
+        const a = time * 0.00015;
         const mx = cx + Math.cos(a) * moonOrbitR;
         const my = cy + Math.sin(a) * moonOrbitR * 0.55;
         drawPlanet(ctx, mx, my, planetR * 0.12, "rocky", 2, planetSeed + 1, time);

@@ -18,7 +18,7 @@ interface BiomePalette {
   // Couleur d'atmosphere (RGBA)
   glow: string;
   // Style de bruit
-  variant: "continents" | "bands" | "rocky" | "barren" | "metallic" | "lava";
+  variant: "continents" | "bands" | "rocky" | "barren" | "metallic" | "lava" | "asteroid" | "station" | "ruins";
   // Animation des nuages (oui/non)
   hasClouds: boolean;
   cloudColor?: [number, number, number];
@@ -211,6 +211,40 @@ const PALETTES: Record<PlanetType, Record<PlanetVariant, BiomePalette>> = {
         { at: 1.00, color: [250, 252, 255] }
       ]
     }
+  }  ,
+  other: {
+    1: { variant: "asteroid", glow: "rgba(160, 130, 90, 0.25)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [25, 20, 18] },
+        { at: 0.45, color: [70, 55, 40] },
+        { at: 0.70, color: [140, 110, 80] },
+        { at: 1.00, color: [200, 180, 140] }
+      ]
+    },
+    2: { variant: "station", glow: "rgba(150, 200, 240, 0.35)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [10, 12, 18] },
+        { at: 0.40, color: [50, 70, 90] },
+        { at: 0.70, color: [150, 180, 210] },
+        { at: 1.00, color: [220, 240, 255] }
+      ]
+    },
+    3: { variant: "ruins", glow: "rgba(100, 90, 110, 0.3)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [12, 10, 16] },
+        { at: 0.45, color: [50, 40, 55] },
+        { at: 0.75, color: [110, 95, 120] },
+        { at: 1.00, color: [180, 170, 190] }
+      ]
+    },
+    4: { variant: "asteroid", glow: "rgba(120, 140, 160, 0.22)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [20, 22, 28] },
+        { at: 0.50, color: [60, 70, 90] },
+        { at: 0.80, color: [130, 145, 170] },
+        { at: 1.00, color: [200, 215, 240] }
+      ]
+    }
   }
 };
 
@@ -299,11 +333,32 @@ function getTextureCanvas(type: PlanetType, variant: PlanetVariant, seed: number
         const f = fbm(ux, uy, seed, 3) * 0.5;
         const craters = ridge(ux * 3, uy * 3, seed + 80, 3);
         h = f + 0.5 * craters;
-      } else {
+      } else if (palette.variant === "metallic") {
         // metallic : grilles + plaques
-        const t = turbulence(ux * 2.5, uy * 2.5, seed, 3);
-        const stripes = Math.abs(Math.sin(uy * 6 + ux * 4 + t * 3));
-        h = 0.45 + t * 0.3 + stripes * 0.2;
+        const tn = turbulence(ux * 2.5, uy * 2.5, seed, 3);
+        const stripes = Math.abs(Math.sin(uy * 6 + ux * 4 + tn * 3));
+        h = 0.45 + tn * 0.3 + stripes * 0.2;
+      } else if (palette.variant === "asteroid") {
+        // Champ d'asteroides : turbulence + masque de "vide" pour donner aspect cluster
+        const tn = turbulence(ux * 3.5, uy * 3.5, seed, 4);
+        const void_ = fbm(ux * 1.2, uy * 1.2, seed + 90, 3);
+        const mask = smoothstep(0.35, 0.7, void_);
+        h = tn * mask;
+      } else if (palette.variant === "station") {
+        // Station spatiale : structure geometrique
+        const r2 = Math.sqrt(dx * dx + dy * dy);
+        const a = Math.atan2(dy, dx);
+        const ring = Math.abs(Math.sin(r2 * 12)) * 0.4 + Math.abs(Math.sin(a * 8)) * 0.3;
+        const struct = smoothstep(0.4, 0.7, ring);
+        const noise_ = fbm(ux * 2, uy * 2, seed + 200, 2) * 0.3;
+        h = 0.3 + struct * 0.6 + noise_;
+      } else if (palette.variant === "ruins") {
+        // Ruines flottantes : fragments + bruit
+        const tn = turbulence(ux * 2.2, uy * 2.2, seed, 3);
+        const rg = ridge(ux * 4, uy * 4, seed + 333, 3);
+        h = tn * 0.5 + rg * 0.4;
+      } else {
+        h = 0.5;
       }
 
       const rgb = colorAt(palette, h);

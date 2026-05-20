@@ -50,10 +50,10 @@ export const seedSystem: StellarSystem = {
 };
 
 export const seedPlanets: Planet[] = [
-  { id: "planet-valthar",  system_id: seedSystem.id, name: "Valthar Prime",  planet_type: "rocky",   variant: 1, orbit_index: 1, orbit_speed: 1.0,  has_moon: false },
-  { id: "planet-morghast", system_id: seedSystem.id, name: "Morghast",       planet_type: "dead",    variant: 1, orbit_index: 2, orbit_speed: 0.72, has_moon: false },
-  { id: "planet-caelum",   system_id: seedSystem.id, name: "Caelum",         planet_type: "oceanic", variant: 1, orbit_index: 3, orbit_speed: 0.55, has_moon: true  },
-  { id: "planet-infernus", system_id: seedSystem.id, name: "Infernus Belt",  planet_type: "gaseous", variant: 3, orbit_index: 4, orbit_speed: 0.36, has_moon: false },
+  { id: "planet-valthar",  system_id: seedSystem.id, name: "Valthar Prime",  planet_type: "rocky",   variant: 1, orbit_index: 1, orbit_speed: 1.0,  has_moon: false, parent_planet_id: null },
+  { id: "planet-morghast", system_id: seedSystem.id, name: "Morghast",       planet_type: "dead",    variant: 1, orbit_index: 2, orbit_speed: 0.72, has_moon: false, parent_planet_id: null },
+  { id: "planet-caelum",   system_id: seedSystem.id, name: "Caelum",         planet_type: "oceanic", variant: 1, orbit_index: 3, orbit_speed: 0.55, has_moon: true, parent_planet_id: null },
+  { id: "planet-infernus", system_id: seedSystem.id, name: "Infernus Belt",  planet_type: "gaseous", variant: 3, orbit_index: 4, orbit_speed: 0.36, has_moon: false, parent_planet_id: null },
 ];
 
 export const seedZones: Zone[] = [
