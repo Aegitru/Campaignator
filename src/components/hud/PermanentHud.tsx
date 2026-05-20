@@ -7,6 +7,9 @@ import { apiEditCall } from "@/lib/api-edit";
 import { computeAllianceStats, computeFactionStats, buildChronicle } from "@/lib/campaign-stats";
 import { FactionSymbol } from "@/lib/faction-symbols";
 import BattleQuickCreate from "@/components/battle/BattleQuickCreate";
+import type { Faction, StellarSystem } from "@/types/domain";
+
+type EntryShape = ReturnType<typeof buildChronicle>[number];
 
 export default function PermanentHud() {
   const { campaign, alliances, factions, battles, zones, planets, systems, openBattle } = useCampaign();
@@ -20,7 +23,6 @@ export default function PermanentHud() {
   const [showChronicle, setShowChronicle] = useState(false);
   const [showAddBattle, setShowAddBattle] = useState(false);
 
-  // Filtres chroniques (quand depliees)
   const [factionFilter, setFactionFilter] = useState("all");
   const [systemFilter, setSystemFilter] = useState("all");
   const [resultFilter, setResultFilter] = useState<"all" | "victory" | "draw">("all");
@@ -28,10 +30,8 @@ export default function PermanentHud() {
   useEffect(() => { setStatusDraft(campaign.status_text); }, [campaign.status_text]);
 
   const allianceMode = campaign.alliance_mode && alliances.length > 0;
-
   const factionStats = useMemo(() => computeFactionStats(factions, battles), [factions, battles]);
   const allianceStats = useMemo(() => computeAllianceStats(alliances, factions, battles), [alliances, factions, battles]);
-
   const totalBattles = battles.length;
 
   const saveStatus = async () => {
@@ -71,7 +71,6 @@ export default function PermanentHud() {
         overflow: "hidden",
       }}
     >
-      {/* HEADER : titre + chevron */}
       <div className="flex items-center justify-between gap-2 mb-2 flex-shrink-0">
         <div className="font-display text-sm tracking-widest truncate" style={{ color: "var(--accent-cyan)" }} title={campaign.name}>
           {"◈"} {campaign.name.toUpperCase()}
@@ -79,7 +78,7 @@ export default function PermanentHud() {
         <button onClick={() => setCollapsed((v) => !v)} className="hud-button"
           style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", lineHeight: 1 }}
           title={collapsed ? "Deplier" : "Replier"}>
-          {collapsed ? "▼" : "▲"}
+          {collapsed ? "v" : "^"}
         </button>
       </div>
 
@@ -94,19 +93,12 @@ export default function PermanentHud() {
               <ForceBar
                 segments={allianceMode
                   ? allianceStats.map((a) => ({
-                      id: a.alliance.id,
-                      label: a.alliance.name,
-                      color: a.alliance.color_hex,
-                      victories: a.victories,
-                      // pour alliance, on prend le symbole de la premiere faction
-                      symbol: a.factions[0]?.faction.symbol_key ?? "etoile",
+                      id: a.alliance.id, label: a.alliance.name, color: a.alliance.color_hex,
+                      victories: a.victories, symbol: a.factions[0]?.faction.symbol_key ?? "etoile",
                     }))
                   : factionStats.map((f) => ({
-                      id: f.faction.id,
-                      label: f.faction.name,
-                      color: f.faction.color_hex,
-                      victories: f.victories,
-                      symbol: f.faction.symbol_key ?? "etoile",
+                      id: f.faction.id, label: f.faction.name, color: f.faction.color_hex,
+                      victories: f.victories, symbol: f.faction.symbol_key ?? "etoile",
                     }))
                 }
               />
@@ -160,11 +152,10 @@ export default function PermanentHud() {
             />
           )}
 
-          {/* Footer actions : Chroniques + Add */}
           <div className="mt-3 pt-2 flex items-center justify-between gap-2 flex-shrink-0" style={{ borderTop: "1px solid var(--border-faded)" }}>
             <button onClick={() => setShowChronicle((v) => !v)} className="hud-button"
               style={{ padding: "0.3rem 0.7rem", fontSize: "0.65rem" }}>
-              {showChronicle ? "← STATUT" : "CHRONIQUES →"}
+              {showChronicle ? "RETOUR STATUT" : "CHRONIQUES"}
             </button>
             {editing && (
               <button onClick={() => setShowAddBattle(true)} className="hud-button"
@@ -184,9 +175,9 @@ export default function PermanentHud() {
   );
 }
 
-function ForceBar({ segments }: {
-  segments: { id: string; color: string; victories: number; label: string; symbol: string }[];
-}) {
+interface SegmentInfo { id: string; color: string; victories: number; label: string; symbol: string }
+
+function ForceBar({ segments }: { segments: SegmentInfo[] }) {
   const total = Math.max(1, segments.reduce((s, x) => s + x.victories, 0));
   return (
     <div className="relative h-9 overflow-hidden flex-shrink-0" style={{
@@ -220,7 +211,24 @@ function ForceBar({ segments }: {
   );
 }
 
-function ChronicleInline({ entries, total, factions, systems, factionFilter, systemFilter, resultFilter, setFactionFilter, setSystemFilter, setResultFilter, onBattleClick }: any) {
+interface ChronicleInlineProps {
+  entries: EntryShape[];
+  total: number;
+  factions: Faction[];
+  systems: StellarSystem[];
+  factionFilter: string; systemFilter: string; resultFilter: string;
+  setFactionFilter: (s: string) => void;
+  setSystemFilter: (s: string) => void;
+  setResultFilter: (s: "all" | "victory" | "draw") => void;
+  onBattleClick: (id: string) => void;
+}
+
+function ChronicleInline({
+  entries, total, factions, systems,
+  factionFilter, systemFilter, resultFilter,
+  setFactionFilter, setSystemFilter, setResultFilter,
+  onBattleClick,
+}: ChronicleInlineProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       <div className="hud-label mb-2 flex-shrink-0">CHRONIQUES // {entries.length}/{total}</div>
@@ -229,15 +237,15 @@ function ChronicleInline({ entries, total, factions, systems, factionFilter, sys
           className="px-1.5 py-0.5 bg-black/40 border font-mono text-[10px]"
           style={{ borderColor: "var(--border-faded)", color: "var(--text-primary)" }}>
           <option value="all">Toutes</option>
-          {factions.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          {factions.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
         <select value={systemFilter} onChange={(e) => setSystemFilter(e.target.value)}
           className="px-1.5 py-0.5 bg-black/40 border font-mono text-[10px]"
           style={{ borderColor: "var(--border-faded)", color: "var(--text-primary)" }}>
           <option value="all">Tous secteurs</option>
-          {systems.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {systems.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)}
+        <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value as "all" | "victory" | "draw")}
           className="px-1.5 py-0.5 bg-black/40 border font-mono text-[10px]"
           style={{ borderColor: "var(--border-faded)", color: "var(--text-primary)" }}>
           <option value="all">Tous</option>
@@ -250,7 +258,7 @@ function ChronicleInline({ entries, total, factions, systems, factionFilter, sys
           <div className="hud-panel--inset px-3 py-4 text-center font-mono text-[10px]" style={{ color: "var(--text-faded)" }}>
             Aucun rapport.
           </div>
-        ) : entries.map(({ battle, zone, planet, winningFaction }: any) => (
+        ) : entries.map(({ battle, zone, planet, winningFaction }) => (
           <button key={battle.id} onClick={() => onBattleClick(battle.id)}
             className="w-full text-left hud-panel--inset px-2 py-1.5 hover:bg-[rgba(0,170,255,0.07)] transition-colors"
             style={{ cursor: "crosshair" }}>
@@ -264,15 +272,15 @@ function ChronicleInline({ entries, total, factions, systems, factionFilter, sys
               {winningFaction ? (
                 <span className="font-mono text-[9px] px-1 py-0.5 flex-shrink-0"
                   style={{ background: hexAlpha(winningFaction.color_hex, 0.18), border: "1px solid " + winningFaction.color_hex, color: "#fff" }}>
-                  ▲
+                  V
                 </span>
               ) : (
                 <span className="font-mono text-[9px] px-1 py-0.5 flex-shrink-0"
-                  style={{ border: "1px solid var(--text-secondary)", color: "var(--text-secondary)" }}>≡</span>
+                  style={{ border: "1px solid var(--text-secondary)", color: "var(--text-secondary)" }}>=</span>
               )}
             </div>
             <div className="font-mono text-[9px] truncate" style={{ color: "var(--text-secondary)" }}>
-              {planet?.name} ▸ {zone?.name}
+              {planet?.name} / {zone?.name}
             </div>
           </button>
         ))}
@@ -289,9 +297,11 @@ function darken(hex: string, amount: number): string {
   const f = (c: number) => Math.max(0, Math.floor(c * (1 - amount)));
   return "rgb(" + f(r) + ", " + f(g) + ", " + f(b) + ")";
 }
+
 function hexAlpha(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  return "rgba(" + r + ", " + g + ", " + b + ", " + alpha +
+  return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+}
