@@ -73,7 +73,7 @@ export default function PlanetView({
 
     const tick = (time: number) => {
       ctx.clearRect(0, 0, size.w, size.h);
-      drawPlanet(ctx, cx, cy, planetR, planet.planet_type, planet.variant, planetSeed);
+      drawPlanet(ctx, cx, cy, planetR, planet.planet_type, planet.variant, planetSeed, time);
       ctx.save();
       ctx.strokeStyle = "rgba(127, 223, 255, 0.10)";
       ctx.lineWidth = 1;
@@ -87,7 +87,7 @@ export default function PlanetView({
         const a = time * 0.0006;
         const mx = cx + Math.cos(a) * moonOrbitR;
         const my = cy + Math.sin(a) * moonOrbitR * 0.55;
-        drawPlanet(ctx, mx, my, planetR * 0.12, "rocky", 2, planetSeed + 1);
+        drawPlanet(ctx, mx, my, planetR * 0.12, "rocky", 2, planetSeed + 1, time);
       }
 
       rafRef.current = requestAnimationFrame(tick);

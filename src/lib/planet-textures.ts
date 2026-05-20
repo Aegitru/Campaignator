@@ -1,217 +1,222 @@
 import type { PlanetType, PlanetVariant } from "@/types/domain";
+import { fbm, ridge, turbulence, warpedFbm, smoothstep, lerp, hexToRgb, mixRgb } from "@/lib/noise";
 
 /**
- * Palettes procédurales des planètes : 5 types × 4 variantes.
- * Le rendu Canvas (cf. drawPlanet) combine ces couleurs avec un bruit simple
- * et des radial-gradients pour obtenir une texture unique par combinaison.
+ * Refonte 2D des textures planètes :
+ * - Rendu pixel-par-pixel via ImageData (4 octaves fBM + domain warp)
+ * - Texture cachee dans une OffscreenCanvas, reutilisee pour les frames suivantes
+ * - 5 types x 4 variantes : palettes + biome shaping different
+ * - Atmosphère + ombrage sphérique appliques au moment du blit
  */
-export interface PlanetPalette {
-  /** Couleur dominante de surface */
-  base: string;
-  /** Couleur secondaire (mers, bandes, ombres) */
-  mid: string;
-  /** Couleur des reliefs ou highlights */
-  high: string;
-  /** Couleur d'atmosphère / halo */
+
+const TEX_SIZE = 200; // resolution interne de chaque texture cachee
+const cache = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
+
+interface BiomePalette {
+  // Couleurs par paliers de hauteur (de basse a haute altitude)
+  bands: Array<{ at: number; color: [number, number, number] }>;
+  // Couleur d'atmosphere (RGBA)
   glow: string;
-  /** Style de texture */
-  texture: "speckled" | "bands" | "liquid" | "barren" | "metallic";
-  /** Nom court pour debug */
-  label: string;
+  // Style de bruit
+  variant: "continents" | "bands" | "rocky" | "barren" | "metallic" | "lava";
+  // Animation des nuages (oui/non)
+  hasClouds: boolean;
+  cloudColor?: [number, number, number];
 }
 
-type VariantMap = Record<PlanetVariant, PlanetPalette>;
+export interface PlanetPalette {
+  label: string;
+  glow: string; // pour compat externe (halo CSS)
+}
 
-export const PLANET_PALETTES: Record<PlanetType, VariantMap> = {
+const PALETTES: Record<PlanetType, Record<PlanetVariant, BiomePalette>> = {
+  oceanic: {
+    1: { variant: "continents", glow: "rgba(120, 180, 240, 0.45)", hasClouds: true, cloudColor: [255,255,255],
+      bands: [
+        { at: 0.00, color: [8, 24, 64] },
+        { at: 0.42, color: [20, 60, 140] },
+        { at: 0.55, color: [40, 110, 200] },
+        { at: 0.60, color: [200, 180, 130] }, // littoral
+        { at: 0.66, color: [80, 130, 70] },
+        { at: 0.85, color: [120, 100, 60] },
+        { at: 1.00, color: [240, 240, 240] }
+      ]
+    },
+    2: { variant: "continents", glow: "rgba(120, 220, 230, 0.5)", hasClouds: true, cloudColor: [240, 250, 255],
+      bands: [
+        { at: 0.00, color: [10, 60, 80] },
+        { at: 0.45, color: [40, 150, 170] },
+        { at: 0.58, color: [120, 220, 230] },
+        { at: 0.62, color: [220, 220, 180] },
+        { at: 0.78, color: [60, 110, 90] },
+        { at: 1.00, color: [220, 230, 200] }
+      ]
+    },
+    3: { variant: "continents", glow: "rgba(130, 200, 150, 0.5)", hasClouds: true, cloudColor: [255,255,255],
+      bands: [
+        { at: 0.00, color: [20, 50, 30] },
+        { at: 0.45, color: [40, 110, 60] },
+        { at: 0.58, color: [80, 160, 90] },
+        { at: 0.62, color: [180, 170, 100] },
+        { at: 0.80, color: [120, 80, 40] },
+        { at: 1.00, color: [220, 220, 220] }
+      ]
+    },
+    4: { variant: "continents", glow: "rgba(220, 240, 255, 0.6)", hasClouds: true, cloudColor: [255,255,255],
+      bands: [
+        { at: 0.00, color: [60, 100, 150] },
+        { at: 0.50, color: [180, 210, 230] },
+        { at: 0.60, color: [240, 250, 255] },
+        { at: 1.00, color: [255, 255, 255] }
+      ]
+    }
+  },
   rocky: {
-    1: {
-      base: "#a8462b",
-      mid: "#6b2716",
-      high: "#e89070",
-      glow: "rgba(255, 120, 80, 0.32)",
-      texture: "speckled",
-      label: "Rouge-Mars",
+    1: { variant: "rocky", glow: "rgba(220, 110, 60, 0.4)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [60, 18, 10] },
+        { at: 0.45, color: [140, 50, 30] },
+        { at: 0.65, color: [200, 100, 60] },
+        { at: 0.85, color: [240, 170, 110] },
+        { at: 1.00, color: [255, 220, 180] }
+      ]
     },
-    2: {
-      base: "#9aa0aa",
-      mid: "#4a505c",
-      high: "#d7dbe2",
-      glow: "rgba(200, 215, 240, 0.28)",
-      texture: "barren",
-      label: "Gris-Lune",
+    2: { variant: "rocky", glow: "rgba(180, 200, 220, 0.32)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [40, 40, 50] },
+        { at: 0.50, color: [110, 110, 120] },
+        { at: 0.75, color: [180, 180, 190] },
+        { at: 1.00, color: [230, 230, 240] }
+      ]
     },
-    3: {
-      base: "#c08540",
-      mid: "#7a4f20",
-      high: "#f0c285",
-      glow: "rgba(240, 200, 130, 0.30)",
-      texture: "speckled",
-      label: "Ocre-Désert",
+    3: { variant: "rocky", glow: "rgba(220, 180, 110, 0.38)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [80, 50, 18] },
+        { at: 0.50, color: [180, 130, 60] },
+        { at: 0.75, color: [220, 180, 110] },
+        { at: 1.00, color: [255, 220, 160] }
+      ]
     },
-    4: {
-      base: "#6e3a26",
-      mid: "#2c0f06",
-      high: "#d65a2a",
-      glow: "rgba(255, 100, 40, 0.45)",
-      texture: "speckled",
-      label: "Brun-Volcanique",
-    },
+    4: { variant: "lava", glow: "rgba(255, 100, 30, 0.55)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [20, 8, 4] },
+        { at: 0.40, color: [60, 22, 10] },
+        { at: 0.55, color: [120, 40, 16] },
+        { at: 0.65, color: [220, 70, 20] },
+        { at: 0.80, color: [255, 160, 40] },
+        { at: 1.00, color: [255, 240, 180] }
+      ]
+    }
   },
   gaseous: {
-    1: {
-      base: "#c5a777",
-      mid: "#7a5d35",
-      high: "#f0dca9",
-      glow: "rgba(240, 220, 170, 0.32)",
-      texture: "bands",
-      label: "Beige-Jupiter",
+    1: { variant: "bands", glow: "rgba(230, 200, 140, 0.45)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [90, 60, 30] },
+        { at: 0.30, color: [200, 160, 100] },
+        { at: 0.55, color: [240, 220, 160] },
+        { at: 0.75, color: [200, 160, 100] },
+        { at: 1.00, color: [120, 90, 50] }
+      ]
     },
-    2: {
-      base: "#3a6ec0",
-      mid: "#1e3a78",
-      high: "#7fb0ff",
-      glow: "rgba(120, 170, 255, 0.40)",
-      texture: "bands",
-      label: "Bleu-Neptune",
+    2: { variant: "bands", glow: "rgba(120, 180, 255, 0.5)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [10, 30, 90] },
+        { at: 0.35, color: [40, 90, 200] },
+        { at: 0.55, color: [120, 180, 255] },
+        { at: 0.75, color: [40, 90, 200] },
+        { at: 1.00, color: [10, 30, 90] }
+      ]
     },
-    3: {
-      base: "#6a3b8a",
-      mid: "#321a48",
-      high: "#b27fd0",
-      glow: "rgba(180, 130, 220, 0.38)",
-      texture: "bands",
-      label: "Violet-Tempête",
+    3: { variant: "bands", glow: "rgba(190, 140, 230, 0.5)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [40, 16, 70] },
+        { at: 0.30, color: [110, 50, 150] },
+        { at: 0.55, color: [180, 130, 220] },
+        { at: 0.75, color: [110, 50, 150] },
+        { at: 1.00, color: [40, 16, 70] }
+      ]
     },
-    4: {
-      base: "#d8c389",
-      mid: "#8e7846",
-      high: "#fdebb5",
-      glow: "rgba(255, 235, 180, 0.32)",
-      texture: "bands",
-      label: "Crème-Saturne",
-    },
-  },
-  oceanic: {
-    1: {
-      base: "#1a4a8a",
-      mid: "#0a1f48",
-      high: "#5da8e8",
-      glow: "rgba(100, 170, 240, 0.42)",
-      texture: "liquid",
-      label: "Bleu-Profond",
-    },
-    2: {
-      base: "#2ba9b8",
-      mid: "#0d5a66",
-      high: "#7ee0ec",
-      glow: "rgba(120, 230, 240, 0.45)",
-      texture: "liquid",
-      label: "Turquoise",
-    },
-    3: {
-      base: "#3a7a55",
-      mid: "#143d27",
-      high: "#7ec39a",
-      glow: "rgba(130, 200, 160, 0.38)",
-      texture: "liquid",
-      label: "Vert-Algues",
-    },
-    4: {
-      base: "#c8dde8",
-      mid: "#7196ab",
-      high: "#ffffff",
-      glow: "rgba(220, 240, 255, 0.55)",
-      texture: "liquid",
-      label: "Blanc-Glacé",
-    },
+    4: { variant: "bands", glow: "rgba(255, 235, 180, 0.45)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [140, 110, 60] },
+        { at: 0.30, color: [220, 200, 130] },
+        { at: 0.55, color: [255, 245, 200] },
+        { at: 0.75, color: [220, 200, 130] },
+        { at: 1.00, color: [140, 110, 60] }
+      ]
+    }
   },
   dead: {
-    1: {
-      base: "#1e1e22",
-      mid: "#070708",
-      high: "#3b3b40",
-      glow: "rgba(70, 70, 80, 0.20)",
-      texture: "barren",
-      label: "Noir-Charbon",
+    1: { variant: "barren", glow: "rgba(70, 70, 80, 0.2)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [8, 8, 12] },
+        { at: 0.50, color: [28, 28, 32] },
+        { at: 0.80, color: [60, 60, 64] },
+        { at: 1.00, color: [110, 110, 116] }
+      ]
     },
-    2: {
-      base: "#7a7570",
-      mid: "#3c3935",
-      high: "#bdb6ae",
-      glow: "rgba(160, 155, 150, 0.22)",
-      texture: "barren",
-      label: "Gris-Cendres",
+    2: { variant: "barren", glow: "rgba(160, 155, 150, 0.22)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [50, 48, 44] },
+        { at: 0.50, color: [120, 115, 108] },
+        { at: 0.80, color: [180, 175, 165] },
+        { at: 1.00, color: [220, 215, 200] }
+      ]
     },
-    3: {
-      base: "#5a3a26",
-      mid: "#2a1809",
-      high: "#a06a3f",
-      glow: "rgba(180, 100, 50, 0.35)",
-      texture: "barren",
-      label: "Brun-Irradié",
+    3: { variant: "barren", glow: "rgba(180, 100, 50, 0.35)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [40, 24, 12] },
+        { at: 0.50, color: [90, 56, 30] },
+        { at: 0.80, color: [160, 100, 50] },
+        { at: 1.00, color: [220, 160, 90] }
+      ]
     },
-    4: {
-      base: "#dfd2bd",
-      mid: "#8e8170",
-      high: "#fff3e0",
-      glow: "rgba(255, 240, 220, 0.30)",
-      texture: "barren",
-      label: "Blanc-Os",
-    },
+    4: { variant: "barren", glow: "rgba(255, 240, 220, 0.30)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [220, 215, 200] },
+        { at: 0.50, color: [240, 230, 210] },
+        { at: 1.00, color: [255, 250, 240] }
+      ]
+    }
   },
   fortress: {
-    1: {
-      base: "#6f7c8a",
-      mid: "#2b3340",
-      high: "#c8d5e5",
-      glow: "rgba(180, 200, 230, 0.35)",
-      texture: "metallic",
-      label: "Métallique-Acier",
+    1: { variant: "metallic", glow: "rgba(180, 200, 230, 0.4)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [25, 30, 40] },
+        { at: 0.50, color: [80, 95, 115] },
+        { at: 0.80, color: [160, 180, 200] },
+        { at: 1.00, color: [220, 230, 245] }
+      ]
     },
-    2: {
-      base: "#a87a3e",
-      mid: "#553a12",
-      high: "#e8c182",
-      glow: "rgba(230, 190, 130, 0.38)",
-      texture: "metallic",
-      label: "Bronze-Antique",
+    2: { variant: "metallic", glow: "rgba(230, 190, 130, 0.38)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [60, 40, 16] },
+        { at: 0.50, color: [150, 110, 60] },
+        { at: 0.80, color: [220, 170, 100] },
+        { at: 1.00, color: [240, 210, 150] }
+      ]
     },
-    3: {
-      base: "#1d1f24",
-      mid: "#050608",
-      high: "#4e5868",
-      glow: "rgba(80, 100, 140, 0.30)",
-      texture: "metallic",
-      label: "Noir-Adamantium",
+    3: { variant: "metallic", glow: "rgba(80, 100, 140, 0.30)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [4, 6, 12] },
+        { at: 0.50, color: [25, 32, 50] },
+        { at: 0.80, color: [60, 75, 100] },
+        { at: 1.00, color: [120, 140, 180] }
+      ]
     },
-    4: {
-      base: "#dfe4ec",
-      mid: "#6a7382",
-      high: "#ffffff",
-      glow: "rgba(220, 235, 255, 0.50)",
-      texture: "metallic",
-      label: "Chrome-Glacé",
-    },
-  },
+    4: { variant: "metallic", glow: "rgba(220, 235, 255, 0.55)", hasClouds: false,
+      bands: [
+        { at: 0.00, color: [180, 195, 220] },
+        { at: 0.50, color: [220, 230, 245] },
+        { at: 1.00, color: [250, 252, 255] }
+      ]
+    }
+  }
 };
 
 export function getPalette(type: PlanetType, variant: PlanetVariant): PlanetPalette {
-  return PLANET_PALETTES[type][variant] ?? PLANET_PALETTES[type][1];
-}
-
-/**
- * PRNG simple (mulberry32) — pour générer des textures déterministes
- * à partir d'un ID de planète (chaque planète aura toujours la même apparence).
- */
-export function seededRandom(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  const p = PALETTES[type]?.[variant] ?? PALETTES.rocky[1];
+  return { label: type + "-" + variant, glow: p.glow };
 }
 
 export function hashString(s: string): number {
@@ -223,230 +228,207 @@ export function hashString(s: string): number {
   return h >>> 0;
 }
 
+function colorAt(palette: BiomePalette, h: number): [number, number, number] {
+  const bands = palette.bands;
+  for (let i = 0; i < bands.length - 1; i++) {
+    if (h <= bands[i + 1].at) {
+      const t = (h - bands[i].at) / (bands[i + 1].at - bands[i].at);
+      return mixRgb(bands[i].color, bands[i + 1].color, Math.max(0, Math.min(1, t)));
+    }
+  }
+  return bands[bands.length - 1].color;
+}
+
+function makeOffscreen(size: number): HTMLCanvasElement | OffscreenCanvas {
+  if (typeof OffscreenCanvas !== "undefined") return new OffscreenCanvas(size, size);
+  const c = document.createElement("canvas");
+  c.width = size; c.height = size;
+  return c;
+}
+
+function getTextureCanvas(type: PlanetType, variant: PlanetVariant, seed: number): HTMLCanvasElement | OffscreenCanvas {
+  const key = type + "-" + variant + "-" + (seed >>> 0);
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const palette = PALETTES[type]?.[variant] ?? PALETTES.rocky[1];
+  const canvas = makeOffscreen(TEX_SIZE);
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+  if (!ctx) return canvas;
+  const img = ctx.createImageData(TEX_SIZE, TEX_SIZE);
+  const data = img.data;
+  const half = TEX_SIZE / 2;
+  const r = half - 1;
+
+  for (let py = 0; py < TEX_SIZE; py++) {
+    for (let px = 0; px < TEX_SIZE; px++) {
+      const dx = (px - half) / r;
+      const dy = (py - half) / r;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 1) continue;
+      const z = Math.sqrt(1 - d2);
+
+      // UV "sphérique" simulée : on utilise (dx, dy, z) comme 3 axes
+      // Pour 2D on combine dx/z + dy comme entree fBM
+      const ux = (dx / (z + 0.5)) * 2;
+      const uy = dy * 2;
+
+      let h: number;
+      if (palette.variant === "continents") {
+        // Domain warp pour casser le bruit fractal
+        const wx = fbm(ux + 5, uy + 5, seed + 100, 3) - 0.5;
+        const wy = fbm(ux - 3, uy - 3, seed + 200, 3) - 0.5;
+        h = fbm(ux * 1.3 + wx * 1.2, uy * 1.3 + wy * 1.2, seed, 5);
+      } else if (palette.variant === "bands") {
+        // Bandes horizontales fortes + perturbations
+        const warp = fbm(ux * 0.7, uy * 0.7, seed + 50, 4) * 0.4;
+        h = 0.5 + 0.45 * Math.sin(uy * 3.5 + warp * 6 + seed * 0.01) + (fbm(ux * 2, uy * 6, seed, 4) - 0.5) * 0.3;
+        h = Math.max(0, Math.min(1, h));
+      } else if (palette.variant === "rocky") {
+        // Mix fbm + ridge pour cratères et failles
+        const f = fbm(ux * 1.5, uy * 1.5, seed, 5);
+        const rg = ridge(ux * 2, uy * 2, seed + 70, 4);
+        h = f * 0.7 + rg * 0.3;
+      } else if (palette.variant === "lava") {
+        // Turbulence pour la lave
+        const t = turbulence(ux * 1.2, uy * 1.2, seed, 4);
+        const fl = fbm(ux * 3, uy * 3, seed + 50, 3);
+        h = Math.min(1, t * 0.65 + fl * 0.45);
+      } else if (palette.variant === "barren") {
+        // Surface lisse avec cratères marqués (ridge inverse)
+        const f = fbm(ux, uy, seed, 3) * 0.5;
+        const craters = ridge(ux * 3, uy * 3, seed + 80, 3);
+        h = f + 0.5 * craters;
+      } else {
+        // metallic : grilles + plaques
+        const t = turbulence(ux * 2.5, uy * 2.5, seed, 3);
+        const stripes = Math.abs(Math.sin(uy * 6 + ux * 4 + t * 3));
+        h = 0.45 + t * 0.3 + stripes * 0.2;
+      }
+
+      const rgb = colorAt(palette, h);
+
+      const i = (py * TEX_SIZE + px) * 4;
+      data[i] = rgb[0];
+      data[i + 1] = rgb[1];
+      data[i + 2] = rgb[2];
+      data[i + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+  cache.set(key, canvas);
+  return canvas;
+}
+
+/** Cache pour les masques nuages, animes via time. Une couche separe rendu rapide. */
+const cloudCache = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
+const CLOUD_SIZE = 128;
+
+function getCloudCanvas(seed: number, cloudColor: [number, number, number]): HTMLCanvasElement | OffscreenCanvas {
+  const key = "clouds-" + (seed >>> 0);
+  const cached = cloudCache.get(key);
+  if (cached) return cached;
+
+  const canvas = makeOffscreen(CLOUD_SIZE);
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+  if (!ctx) return canvas;
+  const img = ctx.createImageData(CLOUD_SIZE, CLOUD_SIZE);
+  const data = img.data;
+  const half = CLOUD_SIZE / 2;
+  const r = half - 1;
+
+  for (let py = 0; py < CLOUD_SIZE; py++) {
+    for (let px = 0; px < CLOUD_SIZE; px++) {
+      const dx = (px - half) / r;
+      const dy = (py - half) / r;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 1) continue;
+      const z = Math.sqrt(1 - d2);
+      const ux = (dx / (z + 0.5)) * 2;
+      const uy = dy * 2;
+      const t = turbulence(ux * 1.8, uy * 1.8, seed + 555, 4);
+      const m = smoothstep(0.45, 0.78, t);
+      const i = (py * CLOUD_SIZE + px) * 4;
+      data[i] = cloudColor[0];
+      data[i + 1] = cloudColor[1];
+      data[i + 2] = cloudColor[2];
+      data[i + 3] = Math.round(220 * m);
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+  cloudCache.set(key, canvas);
+  return canvas;
+}
+
 /**
- * Dessine une planète à un emplacement (cx, cy) avec un rayon r.
- * Le rendu est complètement procédural — aucune image externe.
+ * Dessine une planète au point (cx, cy) avec rayon r.
+ * type, variant, seed déterminent la texture (cachée).
+ * time (ms) permet l'animation des nuages.
  */
 export function drawPlanet(
   ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  r: number,
-  type: PlanetType,
-  variant: PlanetVariant,
-  seed: number
+  cx: number, cy: number, r: number,
+  type: PlanetType, variant: PlanetVariant, seed: number,
+  time: number = 0,
 ) {
-  const palette = getPalette(type, variant);
-  const rand = seededRandom(seed);
+  const palette = PALETTES[type]?.[variant] ?? PALETTES.rocky[1];
 
-  ctx.save();
-  ctx.translate(cx, cy);
-
-  // ---- Halo atmosphérique extérieur ----
+  // --- Halo atmospherique extérieur ---
   const haloR = r * 1.35;
-  const haloGrad = ctx.createRadialGradient(0, 0, r * 0.95, 0, 0, haloR);
+  const haloGrad = ctx.createRadialGradient(cx, cy, r * 0.95, cx, cy, haloR);
   haloGrad.addColorStop(0, palette.glow);
   haloGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = haloGrad;
   ctx.beginPath();
-  ctx.arc(0, 0, haloR, 0, Math.PI * 2);
+  ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
   ctx.fill();
 
-  // ---- Disque planétaire (clip pour les textures internes) ----
+  // --- Disque planétaire (clip) ---
   ctx.save();
   ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.clip();
 
-  // Base
-  ctx.fillStyle = palette.base;
-  ctx.fillRect(-r, -r, r * 2, r * 2);
+  // Texture cachée blitée
+  const tex = getTextureCanvas(type, variant, seed);
+  ctx.drawImage(tex as CanvasImageSource, cx - r, cy - r, r * 2, r * 2);
 
-  // Texture selon le type
-  switch (palette.texture) {
-    case "bands": {
-      // Bandes horizontales (gazeuses)
-      const bands = 7 + Math.floor(rand() * 5);
-      for (let i = 0; i < bands; i++) {
-        const y = -r + (r * 2 * i) / bands + rand() * 4 - 2;
-        const h = (r * 2) / bands;
-        const useMid = rand() > 0.5;
-        ctx.fillStyle = useMid ? palette.mid : palette.high;
-        ctx.globalAlpha = 0.25 + rand() * 0.25;
-        ctx.fillRect(-r, y, r * 2, h * (0.55 + rand() * 0.4));
-      }
-      ctx.globalAlpha = 1;
-      // Tâche cyclonique
-      if (rand() > 0.4) {
-        const sx = -r * 0.3 + rand() * r * 0.5;
-        const sy = -r * 0.2 + rand() * r * 0.3;
-        const sR = r * (0.12 + rand() * 0.18);
-        const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sR);
-        g.addColorStop(0, palette.high);
-        g.addColorStop(1, palette.mid);
-        ctx.globalAlpha = 0.55;
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(sx, sy, sR, sR * 0.55, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-      break;
-    }
-    case "liquid": {
-      // Continents flottants (oceanic)
-      const blobs = 5 + Math.floor(rand() * 5);
-      for (let i = 0; i < blobs; i++) {
-        const angle = rand() * Math.PI * 2;
-        const dist = rand() * r * 0.7;
-        const bx = Math.cos(angle) * dist;
-        const by = Math.sin(angle) * dist;
-        const bR = r * (0.1 + rand() * 0.22);
-        const g = ctx.createRadialGradient(bx, by, 0, bx, by, bR);
-        g.addColorStop(0, palette.high);
-        g.addColorStop(0.6, palette.mid);
-        g.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.globalAlpha = 0.5 + rand() * 0.3;
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(bx, by, bR, bR * (0.6 + rand() * 0.5), rand() * Math.PI, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      break;
-    }
-    case "speckled": {
-      // Cratères / reliefs (rocky)
-      const dots = 60 + Math.floor(rand() * 60);
-      for (let i = 0; i < dots; i++) {
-        const angle = rand() * Math.PI * 2;
-        const dist = rand() * r * 0.95;
-        const dx = Math.cos(angle) * dist;
-        const dy = Math.sin(angle) * dist;
-        const dR = 1 + rand() * (r * 0.06);
-        ctx.fillStyle = rand() > 0.55 ? palette.mid : palette.high;
-        ctx.globalAlpha = 0.25 + rand() * 0.45;
-        ctx.beginPath();
-        ctx.arc(dx, dy, dR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      // Failles
-      const cracks = 3 + Math.floor(rand() * 3);
-      for (let i = 0; i < cracks; i++) {
-        ctx.strokeStyle = palette.mid;
-        ctx.globalAlpha = 0.35;
-        ctx.lineWidth = 1 + rand();
-        ctx.beginPath();
-        const sx = (rand() - 0.5) * r * 1.8;
-        const sy = (rand() - 0.5) * r * 1.8;
-        ctx.moveTo(sx, sy);
-        let px = sx;
-        let py = sy;
-        const steps = 6 + Math.floor(rand() * 6);
-        for (let s = 0; s < steps; s++) {
-          px += (rand() - 0.5) * r * 0.4;
-          py += (rand() - 0.5) * r * 0.4;
-          ctx.lineTo(px, py);
-        }
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-      break;
-    }
-    case "barren": {
-      // Surface stérile, poussière fine
-      const dust = 200 + Math.floor(rand() * 200);
-      for (let i = 0; i < dust; i++) {
-        const angle = rand() * Math.PI * 2;
-        const dist = rand() * r;
-        const dx = Math.cos(angle) * dist;
-        const dy = Math.sin(angle) * dist;
-        ctx.fillStyle = rand() > 0.5 ? palette.high : palette.mid;
-        ctx.globalAlpha = 0.08 + rand() * 0.2;
-        ctx.fillRect(dx, dy, 1.2, 1.2);
-      }
-      // Cratères larges
-      const craters = 6 + Math.floor(rand() * 6);
-      for (let i = 0; i < craters; i++) {
-        const angle = rand() * Math.PI * 2;
-        const dist = rand() * r * 0.85;
-        const dx = Math.cos(angle) * dist;
-        const dy = Math.sin(angle) * dist;
-        const dR = r * (0.04 + rand() * 0.12);
-        const g = ctx.createRadialGradient(dx, dy, 0, dx, dy, dR);
-        g.addColorStop(0, palette.mid);
-        g.addColorStop(0.7, palette.high);
-        g.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.globalAlpha = 0.45;
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(dx, dy, dR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      break;
-    }
-    case "metallic": {
-      // Structures géométriques (fortress)
-      const rings = 4 + Math.floor(rand() * 3);
-      for (let i = 0; i < rings; i++) {
-        ctx.strokeStyle = palette.high;
-        ctx.globalAlpha = 0.18 + rand() * 0.2;
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.arc(0, 0, r * (0.2 + i * 0.18), 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      const segs = 18;
-      for (let i = 0; i < segs; i++) {
-        ctx.strokeStyle = palette.mid;
-        ctx.globalAlpha = 0.3;
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        const a = (i / segs) * Math.PI * 2;
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-        ctx.stroke();
-      }
-      // Plaques métalliques
-      const plates = 14 + Math.floor(rand() * 10);
-      for (let i = 0; i < plates; i++) {
-        const angle = rand() * Math.PI * 2;
-        const dist = rand() * r * 0.85;
-        const dx = Math.cos(angle) * dist;
-        const dy = Math.sin(angle) * dist;
-        const w = r * (0.08 + rand() * 0.12);
-        const h = r * (0.04 + rand() * 0.08);
-        ctx.save();
-        ctx.translate(dx, dy);
-        ctx.rotate(angle);
-        ctx.fillStyle = rand() > 0.5 ? palette.high : palette.mid;
-        ctx.globalAlpha = 0.55;
-        ctx.fillRect(-w / 2, -h / 2, w, h);
-        ctx.restore();
-      }
-      ctx.globalAlpha = 1;
-      break;
-    }
+  // Nuages animés (translation horizontale)
+  if (palette.hasClouds && palette.cloudColor) {
+    const clouds = getCloudCanvas(seed + 9999, palette.cloudColor);
+    const offset = ((time * 0.000012 * r) % (r * 2));
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset, cy - r, r * 2, r * 2);
+    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - r * 2, cy - r, r * 2, r * 2);
+    ctx.globalAlpha = 1;
   }
 
-  // ---- Ombrage spherique (light from upper-left) ----
-  const shade = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r);
-  shade.addColorStop(0, "rgba(255, 255, 255, 0.18)");
+  // --- Ombrage sphérique (lumière haut-gauche) ---
+  const shade = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+  shade.addColorStop(0, "rgba(255, 255, 255, 0.16)");
   shade.addColorStop(0.45, "rgba(255, 255, 255, 0)");
-  shade.addColorStop(1, "rgba(0, 0, 0, 0.55)");
+  shade.addColorStop(1, "rgba(0, 0, 0, 0.65)");
   ctx.fillStyle = shade;
-  ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
 
-  // ---- Terminator (ombre côté nuit) ----
-  const term = ctx.createRadialGradient(r * 0.55, r * 0.4, r * 0.2, 0, 0, r);
-  term.addColorStop(0, "rgba(0, 0, 0, 0.55)");
-  term.addColorStop(0.55, "rgba(0, 0, 0, 0.15)");
+  // --- Terminator (ombre cote nuit, plus marquee) ---
+  const term = ctx.createRadialGradient(cx + r * 0.55, cy + r * 0.4, r * 0.2, cx, cy, r);
+  term.addColorStop(0, "rgba(0, 0, 0, 0.65)");
+  term.addColorStop(0.55, "rgba(0, 0, 0, 0.2)");
   term.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = term;
-  ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
 
-  ctx.restore(); // unclip
-  ctx.restore(); // translate
+  // --- Rim light (atmosphere bord) ---
+  if (palette.hasClouds || palette.variant === "continents") {
+    const rim = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
+    rim.addColorStop(0, "rgba(127, 200, 255, 0)");
+    rim.addColorStop(1, "rgba(127, 200, 255, 0.35)");
+    ctx.fillStyle = rim;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+
+  ctx.restore();
 }

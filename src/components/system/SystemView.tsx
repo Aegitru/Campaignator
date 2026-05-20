@@ -150,15 +150,7 @@ export default function SystemView({
         const px = cx + ex * Math.cos(tilt) - ey * Math.sin(tilt);
         const py = cy + ex * Math.sin(tilt) + ey * Math.cos(tilt);
 
-        drawPlanet(
-          ctx,
-          px,
-          py,
-          ps.planetRadius,
-          ps.planet.planet_type,
-          ps.planet.variant,
-          ps.seed
-        );
+        drawPlanet(ctx, px, py, ps.planetRadius, ps.planet.planet_type, ps.planet.variant, ps.seed, time);
 
         // Lune
         if (ps.planet.has_moon) {
