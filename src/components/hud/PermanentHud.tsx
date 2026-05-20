@@ -156,7 +156,7 @@ export default function PermanentHud() {
               factions={factions} systems={systems}
               factionFilter={factionFilter} systemFilter={systemFilter} resultFilter={resultFilter}
               setFactionFilter={setFactionFilter} setSystemFilter={setSystemFilter} setResultFilter={setResultFilter}
-              onBattleClick={(id) => openBattle(id)}
+              onBattleClick={(id: string) => openBattle(id)}
             />
           )}
 
@@ -294,5 +294,4 @@ function hexAlpha(hex: string, alpha: number): string {
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
-}
+  return "rgba(" + r + ", " + g + ", " + b + ", " + alpha +
