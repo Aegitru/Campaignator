@@ -9,7 +9,7 @@ import { fbm, ridge, turbulence, warpedFbm, smoothstep, lerp, hexToRgb, mixRgb }
  * - Atmosphère + ombrage sphérique appliques au moment du blit
  */
 
-const TEX_SIZE = 200; // resolution interne de chaque texture cachee
+const TEX_SIZE = 384; // resolution interne de chaque texture cachee
 const cache = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
 
 interface BiomePalette {
@@ -258,7 +258,7 @@ function getTextureCanvas(type: PlanetType, variant: PlanetVariant, seed: number
   const img = ctx.createImageData(TEX_SIZE, TEX_SIZE);
   const data = img.data;
   const half = TEX_SIZE / 2;
-  const r = half - 1;
+  const r = half;
 
   for (let py = 0; py < TEX_SIZE; py++) {
     for (let px = 0; px < TEX_SIZE; px++) {
@@ -336,7 +336,7 @@ function getCloudCanvas(seed: number, cloudColor: [number, number, number]): HTM
   const img = ctx.createImageData(CLOUD_SIZE, CLOUD_SIZE);
   const data = img.data;
   const half = CLOUD_SIZE / 2;
-  const r = half - 1;
+  const r = half;
 
   for (let py = 0; py < CLOUD_SIZE; py++) {
     for (let px = 0; px < CLOUD_SIZE; px++) {
@@ -393,15 +393,15 @@ export function drawPlanet(
 
   // Texture cachée blitée
   const tex = getTextureCanvas(type, variant, seed);
-  ctx.drawImage(tex as CanvasImageSource, cx - r, cy - r, r * 2, r * 2);
+  ctx.drawImage(tex as CanvasImageSource, cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
 
   // Nuages animés (translation horizontale)
   if (palette.hasClouds && palette.cloudColor) {
     const clouds = getCloudCanvas(seed + 9999, palette.cloudColor);
     const offset = ((time * 0.000012 * r) % (r * 2));
     ctx.globalAlpha = 0.6;
-    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset, cy - r, r * 2, r * 2);
-    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - r * 2, cy - r, r * 2, r * 2);
+    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - r * 2 - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
     ctx.globalAlpha = 1;
   }
 
