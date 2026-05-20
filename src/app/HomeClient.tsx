@@ -121,12 +121,11 @@ export default function HomeClient({
           campaignName={promptFor.name}
           onClose={() => setPromptFor(null)}
           onUnlocked={() => {
-            // Direction: page galaxie de la campagne ; en V3 on a pas encore /campaign/[id]
-            // donc on ouvre le premier systeme ou la liste des systemes
             router.push(`/campaign/${promptFor.id}`);
           }}
         />
       )}
+      </div>
     </div>
   );
 }
