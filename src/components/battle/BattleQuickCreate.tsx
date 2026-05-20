@@ -3,10 +3,19 @@
 import { useState } from "react";
 import { useCampaign } from "@/lib/campaign-context";
 import BattleEditor from "@/components/battle/BattleEditor";
+import PortalToBody from "@/components/overlays/PortalToBody";
 
 interface Props { campaignId: string; onClose: () => void }
 
-export default function BattleQuickCreate({ campaignId, onClose }: Props) {
+export default function BattleQuickCreate(props: Props) {
+  return (
+    <PortalToBody>
+      <BattleQuickCreateInner {...props} />
+    </PortalToBody>
+  );
+}
+
+function BattleQuickCreateInner({ campaignId, onClose }: Props) {
   const { systems, planets, zones } = useCampaign();
   const [systemId, setSystemId] = useState<string>("");
   const [planetId, setPlanetId] = useState<string>("");
@@ -66,10 +75,4 @@ export default function BattleQuickCreate({ campaignId, onClose }: Props) {
           )}
         </div>
 
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>ANNULER</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+        <div cl
