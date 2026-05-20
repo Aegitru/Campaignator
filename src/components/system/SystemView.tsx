@@ -279,6 +279,4 @@ function planetTypeLabel(t: Planet["planet_type"]): string {
       oceanic: "Monde océanique",
       dead: "Monde mort",
       fortress: "Monde-forteresse",
-    } as const
-  )[t];
-}
+      other: "Objet spati
