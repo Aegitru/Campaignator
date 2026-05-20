@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FactionSymbol, FACTION_SYMBOLS, SYMBOL_LABELS } from "@/lib/faction-symbols";
 
 interface Props {
   onClose: () => void;
@@ -8,7 +9,7 @@ interface Props {
 }
 
 interface Alliance { name: string; color: string }
-interface Faction { name: string; color: string; allianceName?: string }
+interface Faction { name: string; color: string; allianceName?: string; symbol: string }
 
 const DEFAULT_COLORS = ["#0d47a1", "#8b1a1a", "#2d4a1a", "#5a1a8a", "#8a7a1a", "#1a8a7a"];
 
@@ -24,7 +25,7 @@ export default function CreateCampaignWizard({ onClose, onCreated }: Props) {
     { name: "Alliance B", color: "#3a1a1a" },
   ]);
   const [factions, setFactions] = useState<Faction[]>([
-    { name: "Faction 1", color: DEFAULT_COLORS[0] },
+    { name: "Faction 1", color: DEFAULT_COLORS[0], symbol: "etoile" },
   ]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +67,7 @@ export default function CreateCampaignWizard({ onClose, onCreated }: Props) {
 
   const addFaction = () => {
     if (factions.length >= 6) return;
-    setFactions([...factions, { name: `Faction ${factions.length + 1}`, color: DEFAULT_COLORS[factions.length] ?? "#888" }]);
+    setFactions([...factions, { name: `Faction ${factions.length + 1}`, color: DEFAULT_COLORS[factions.length] ?? "#888", symbol: FACTION_SYMBOLS[factions.length % FACTION_SYMBOLS.length] }]);
   };
   const removeFaction = (i: number) => setFactions(factions.filter((_, j) => j !== i));
   const updateFaction = (i: number, patch: Partial<Faction>) =>
@@ -201,6 +202,12 @@ export default function CreateCampaignWizard({ onClose, onCreated }: Props) {
                     <div key={i} className="hud-panel--inset px-3 py-2 flex gap-2 items-center flex-wrap">
                       <input type="color" value={f.color} onChange={(e) => updateFaction(i, { color: e.target.value })}
                         className="w-8 h-8 bg-transparent border-0 cursor-crosshair" />
+                      <select value={f.symbol} onChange={(e) => updateFaction(i, { symbol: e.target.value })}
+                        className="px-2 py-1 bg-black/40 border font-mono text-xs focus:outline-none"
+                        style={{ borderColor: "var(--border-faded)", color: "var(--text-primary)" }}>
+                        {FACTION_SYMBOLS.map((s) => <option key={s} value={s}>{SYMBOL_LABELS[s]}</option>)}
+                      </select>
+                      <FactionSymbol symbol={f.symbol} size={20} />
                       <input type="text" value={f.name} onChange={(e) => updateFaction(i, { name: e.target.value })}
                         className="flex-1 min-w-[120px] px-2 py-1 bg-black/40 border font-mono text-xs focus:outline-none"
                         style={{ borderColor: "var(--border-faded)", color: "var(--text-primary)" }} />
@@ -254,6 +261,7 @@ export default function CreateCampaignWizard({ onClose, onCreated }: Props) {
                 {factions.map((f) => (
                   <div key={f.name} className="flex items-center gap-2 mt-1">
                     <span className="inline-block w-3 h-3" style={{ background: f.color }} />
+                    <FactionSymbol symbol={f.symbol} size={16} />
                     <span>{f.name}</span>
                     {f.allianceName && <span style={{ color: "var(--text-secondary)" }}>({f.allianceName})</span>}
                   </div>

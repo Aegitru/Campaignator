@@ -10,6 +10,7 @@ import { apiEditCall } from "@/lib/api-edit";
 import type { CampaignBundle } from "@/lib/supabase-queries";
 import QuickCreateModal from "@/components/edit/QuickCreateModal";
 import GlobalOverlays from "@/components/overlays/GlobalOverlays";
+import ScanLoader from "@/components/visual/ScanLoader";
 
 export default function GalaxyPageClient({ bundle }: { bundle: CampaignBundle }) {
   return (
@@ -28,6 +29,7 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
   const { isCampaignUnlocked } = useSession();
   const editing = isCampaignUnlocked(bundle.campaign.id);
   const [placingMode, setPlacingMode] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [pendingPlacement, setPendingPlacement] = useState<{ x: number; y: number } | null>(null);
 
   return (
@@ -39,7 +41,7 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
           editing={editing}
           placingMode={placingMode}
           onPlace={(x, y) => { setPlacingMode(false); setPendingPlacement({ x, y }); }}
-          onSystemClick={(s) => router.push(`/system/${s.id}`)}
+          onSystemClick={(s) => { setNavigating(true); setTimeout(() => router.push(`/system/${s.id}`), 100); }}
           onMoveSystem={async (id, x, y) => {
             await apiEditCall("/api/systems", "PUT", bundle.campaign.id, { id, galaxy_pos_x: x, galaxy_pos_y: y });
             router.refresh();
@@ -70,6 +72,12 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
           FACTIONS ⛏
         </Link>
       </div>
+
+      {navigating && (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center" style={{ background: "rgba(5,10,25,0.92)", backdropFilter: "blur(4px)" }}>
+          <ScanLoader label="SCANNING SYSTEM" />
+        </div>
+      )}
 
       {pendingPlacement && (
         <QuickCreateModal

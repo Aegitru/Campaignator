@@ -38,6 +38,7 @@ export interface Faction {
   name: string;
   color_hex: string;
   lore_text: string;
+  symbol_key: string;
 }
 
 export interface FactionUnit {

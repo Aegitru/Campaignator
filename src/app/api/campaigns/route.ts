@@ -11,7 +11,7 @@ interface CreateBody {
   password: string;
   allianceMode: boolean;
   alliances?: { name: string; color: string }[];
-  factions: { name: string; color: string; allianceName?: string }[];
+  factions: { name: string; color: string; allianceName?: string; symbol?: string }[];
 }
 
 async function authorize(campaignId: string, password: string) {
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const factionRows = body.factions.map((f) => ({
       campaign_id: camp.id,
       alliance_id: body.allianceMode && f.allianceName ? allianceIdByName.get(f.allianceName) ?? null : null,
-      name: f.name.trim(), color_hex: f.color, lore_text: "",
+      name: f.name.trim(), color_hex: f.color, lore_text: "", symbol_key: f.symbol ?? "etoile",
     }));
     const { error: fErr } = await sb.from("factions").insert(factionRows);
     if (fErr) return NextResponse.json({ error: `Insert factions: ${fErr.message}` }, { status: 500 });

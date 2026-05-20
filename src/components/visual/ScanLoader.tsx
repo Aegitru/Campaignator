@@ -91,9 +91,7 @@ export default function ScanLoader({ label = "SCANNING SECTOR" }: Props) {
         <div className="hud-label hud-pulse mb-1" style={{ color: "var(--accent-cyan)", fontSize: "0.85rem", letterSpacing: "0.3em" }}>
           {label}
         </div>
-        <div className="font-mono text-[10px]" style={{ color: "var(--text-faded)" }}>
-          THE EMPEROR PROTECTS
-        </div>
+        
       </div>
     </div>
   );

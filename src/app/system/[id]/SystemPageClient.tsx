@@ -10,6 +10,7 @@ import { useSession } from "@/lib/session-context";
 import QuickCreateModal from "@/components/edit/QuickCreateModal";
 import SystemInfoModal from "@/components/system/SystemInfoModal";
 import GlobalOverlays from "@/components/overlays/GlobalOverlays";
+import ScanLoader from "@/components/visual/ScanLoader";
 import type { CampaignData } from "@/lib/fetch-campaign-data";
 
 interface Props {
@@ -38,9 +39,11 @@ function SystemPageInner({ system, planets, data }: Props) {
 
   const [showInfo, setShowInfo] = useState(false);
   const [showCreatePlanet, setShowCreatePlanet] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   const navigateToPlanet = (p: Planet) => {
-    router.push(`/planet/${p.id}`);
+    setNavigating(true);
+    setTimeout(() => router.push(`/planet/${p.id}`), 100);
   };
 
   return (
@@ -90,6 +93,12 @@ function SystemPageInner({ system, planets, data }: Props) {
         <SystemInfoModal
           system={system} planets={planets} campaignId={data.campaign.id}
           canEdit={editing} onClose={() => setShowInfo(false)} />
+      )}
+
+      {navigating && (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center" style={{ background: "rgba(5,10,25,0.92)", backdropFilter: "blur(4px)" }}>
+          <ScanLoader label="SCANNING SURFACE" />
+        </div>
       )}
 
       {showCreatePlanet && (

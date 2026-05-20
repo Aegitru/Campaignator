@@ -52,7 +52,7 @@ export default function PasswordPrompt({ campaignId, campaignName, onClose, onUn
         className="hud-panel hud-panel--strong p-6 max-w-md w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="hud-label mb-2">AUTHORIZATION_REQUEST</div>
+        <div className="hud-label mb-2">Accès à la campagne</div>
         <h3
           className="font-display text-xl mb-1"
           style={{ color: "var(--accent-cyan)" }}
@@ -63,11 +63,10 @@ export default function PasswordPrompt({ campaignId, campaignName, onClose, onUn
           className="font-mono text-xs mb-5"
           style={{ color: "var(--text-secondary)" }}
         >
-          Saisis le code d'acces pour entrer en mode edition.
-          Lecture libre sans code.
+          Accéder à la campagne avec le mot de passe.
         </p>
 
-        <div className="hud-label mb-2">PASSCODE</div>
+        <div className="hud-label mb-2">MOT DE PASSE</div>
         <input
           type="password"
           autoFocus

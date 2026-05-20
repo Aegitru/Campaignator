@@ -51,14 +51,14 @@ export default function QuickCreateModal({ mode, onClose }: Props) {
     onClose();
   };
 
-  const title = mode.kind === "system" ? "Nouveau systeme stellaire"
-    : mode.kind === "planet" ? "Nouvelle planete" : "Nouvelle zone";
+  const title = mode.kind === "system" ? "Nouveau secteur stellaire"
+    : mode.kind === "planet" ? "Nouvelle planète" : "Nouvelle zone";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }} onClick={onClose}>
       <div className="hud-panel hud-panel--strong max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="hud-label mb-1">QUICK_CREATE - {mode.kind.toUpperCase()}</div>
+        <div className="hud-label mb-1">CRÉATION</div>
         <h2 className="font-display text-xl mb-4" style={{ color: "var(--accent-cyan)" }}>{title}</h2>
 
         <div className="space-y-3 mb-4">

@@ -29,12 +29,12 @@ export const seedFactions: Faction[] = [
   {
     id: "faction-ultramarines", campaign_id: seedCampaign.id, alliance_id: "alliance-imperium",
     name: "Ultramarines", color_hex: "#0d47a1",
-    lore_text: "Chapitre Adeptus Astartes loyaliste, heritiers de Roboute Guilliman.",
+    lore_text: "Chapitre Adeptus Astartes loyaliste, heritiers de Roboute Guilliman.", symbol_key: "aigle",
   },
   {
     id: "faction-deathguard", campaign_id: seedCampaign.id, alliance_id: "alliance-chaos",
     name: "Death Guard", color_hex: "#2d4a1a",
-    lore_text: "Legion traitresse dediee a Nurgle, semant peste et corruption.",
+    lore_text: "Legion traitresse dediee a Nurgle, semant peste et corruption.", symbol_key: "crane",
   },
 ];
 
