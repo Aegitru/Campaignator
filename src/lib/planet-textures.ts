@@ -247,12 +247,175 @@ function makeOffscreen(size: number): HTMLCanvasElement | OffscreenCanvas {
   return c;
 }
 
+
+// ---------- DEAD planet HQ helpers ----------
+
+/** Mulberry32 PRNG : seedable et stable */
+function mulberry32(seed: number): () => number {
+  let t = seed >>> 0;
+  return function () {
+    t = (t + 0x6D2B79F5) >>> 0;
+    let r = t;
+    r = Math.imul(r ^ (r >>> 15), r | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** fBM 3D approximatif : moyenne 3 plans fBM (xy, yz, zx) */
+function fbm3(x: number, y: number, z: number, seed: number, octaves: number = 4): number {
+  return (
+    fbm(x, y, seed, octaves) +
+    fbm(y, z, seed + 1000, octaves) +
+    fbm(z, x, seed + 2000, octaves)
+  ) / 3;
+}
+
+interface Crater { nx: number; ny: number; nz: number; angR: number; depth: number; ringBoost: number }
+
+function makeCraters(seed: number): Crater[] {
+  const rnd = mulberry32(seed + 31337);
+  const out: Crater[] = [];
+  // Tres grands bassins (peu nombreux)
+  for (let i = 0; i < 3; i++) {
+    const theta = rnd() * Math.PI * 2;
+    const phi = Math.acos(2 * rnd() - 1);
+    out.push({
+      nx: Math.sin(phi) * Math.cos(theta),
+      ny: Math.sin(phi) * Math.sin(theta),
+      nz: Math.cos(phi),
+      angR: 0.28 + rnd() * 0.15,
+      depth: 0.55 + rnd() * 0.25,
+      ringBoost: 0.7 + rnd() * 0.3,
+    });
+  }
+  // Grands cratères
+  for (let i = 0; i < 8; i++) {
+    const theta = rnd() * Math.PI * 2;
+    const phi = Math.acos(2 * rnd() - 1);
+    out.push({
+      nx: Math.sin(phi) * Math.cos(theta),
+      ny: Math.sin(phi) * Math.sin(theta),
+      nz: Math.cos(phi),
+      angR: 0.14 + rnd() * 0.08,
+      depth: 0.4 + rnd() * 0.25,
+      ringBoost: 0.5 + rnd() * 0.3,
+    });
+  }
+  // Moyens
+  for (let i = 0; i < 22; i++) {
+    const theta = rnd() * Math.PI * 2;
+    const phi = Math.acos(2 * rnd() - 1);
+    out.push({
+      nx: Math.sin(phi) * Math.cos(theta),
+      ny: Math.sin(phi) * Math.sin(theta),
+      nz: Math.cos(phi),
+      angR: 0.06 + rnd() * 0.04,
+      depth: 0.25 + rnd() * 0.2,
+      ringBoost: 0.35 + rnd() * 0.25,
+    });
+  }
+  // Petits impacts
+  for (let i = 0; i < 55; i++) {
+    const theta = rnd() * Math.PI * 2;
+    const phi = Math.acos(2 * rnd() - 1);
+    out.push({
+      nx: Math.sin(phi) * Math.cos(theta),
+      ny: Math.sin(phi) * Math.sin(theta),
+      nz: Math.cos(phi),
+      angR: 0.022 + rnd() * 0.022,
+      depth: 0.15 + rnd() * 0.18,
+      ringBoost: 0.2 + rnd() * 0.2,
+    });
+  }
+  return out;
+}
+
+/** Rendu HQ specifique au type "dead" : sampling 3D + crateres */
+function renderDeadHQ(palette: BiomePalette, seed: number): HTMLCanvasElement | OffscreenCanvas {
+  const canvas = makeOffscreen(TEX_SIZE);
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+  if (!ctx) return canvas;
+  const img = ctx.createImageData(TEX_SIZE, TEX_SIZE);
+  const data = img.data;
+  const half = TEX_SIZE / 2;
+  const r = half;
+
+  const craters = makeCraters(seed);
+  // Pre-filtre : on ne garde que les crateres visibles (nz > -angR)
+  const visible = craters.filter((c) => c.nz > -c.angR * 1.3);
+
+  for (let py = 0; py < TEX_SIZE; py++) {
+    for (let px = 0; px < TEX_SIZE; px++) {
+      const dx = (px - half) / r;
+      const dy = (py - half) / r;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 1) continue;
+      const z = Math.sqrt(1 - d2);
+
+      // Base height via fBM 3D (regolithe + collines)
+      const baseScale = 2.2;
+      const regolith = fbm3(dx * baseScale * 4, dy * baseScale * 4, z * baseScale * 4, seed, 4);
+      const macro = fbm3(dx * baseScale, dy * baseScale, z * baseScale, seed + 500, 5);
+      let h = macro * 0.65 + regolith * 0.35;
+
+      // Application des cratères : modulation de h selon distance angulaire
+      let craterMod = 0;
+      for (let k = 0; k < visible.length; k++) {
+        const c = visible[k];
+        const dot = dx * c.nx + dy * c.ny + z * c.nz;
+        // Outside zone of influence
+        const cosThresh = Math.cos(c.angR * 1.4);
+        if (dot < cosThresh) continue;
+        const angDist = Math.acos(dot > 1 ? 1 : dot < -1 ? -1 : dot);
+        const norm = angDist / c.angR;
+        if (norm < 0.82) {
+          // Basin floor : depression progressive vers le centre
+          craterMod -= c.depth * (1 - norm * 0.4);
+        } else if (norm < 1.0) {
+          // Rim : pic abrupt
+          const t = (norm - 0.82) / 0.18;
+          craterMod += c.depth * c.ringBoost * Math.sin(t * Math.PI);
+        } else if (norm < 1.35) {
+          // Ejecta : retombees claires en s'estompant
+          const t = (norm - 1.0) / 0.35;
+          craterMod += c.depth * 0.18 * (1 - t);
+        }
+      }
+
+      // Quelques pics aigus (montagnes residuelles) via ridge
+      const peaks = (1 - Math.abs(fbm3(dx * 6, dy * 6, z * 6, seed + 800, 3) - 0.5) * 2) * 0.12;
+
+      h = Math.max(0, Math.min(1, h + craterMod * 0.55 + peaks));
+
+      const rgb = colorAt(palette, h);
+
+      const i = (py * TEX_SIZE + px) * 4;
+      data[i] = rgb[0];
+      data[i + 1] = rgb[1];
+      data[i + 2] = rgb[2];
+      data[i + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
 function getTextureCanvas(type: PlanetType, variant: PlanetVariant, seed: number): HTMLCanvasElement | OffscreenCanvas {
   const key = type + "-" + variant + "-" + (seed >>> 0);
   const cached = cache.get(key);
   if (cached) return cached;
 
   const palette = PALETTES[type]?.[variant] ?? PALETTES.rocky[1];
+
+  // --- Dispatch HQ pour le type "dead" (refonte experimentale) ---
+  if (type === "dead") {
+    const hq = renderDeadHQ(palette, seed);
+    cache.set(key, hq);
+    return hq;
+  }
+
   const canvas = makeOffscreen(TEX_SIZE);
   const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
   if (!ctx) return canvas;
