@@ -264,49 +264,28 @@ function mulberry32(seed: number): () => number {
 
 interface Crater { nx: number; ny: number; nz: number; angR: number; depth: number; ringBoost: number }
 
-/** Distribution centrée sur les tailles moyennes, organisée en amas */
+/** Distribution dense de cratères de tailles variées mais toutes petites */
 function makeCraters(seed: number): Crater[] {
   const rnd = mulberry32(seed + 31337);
   const out: Crater[] = [];
-  const randomUnit = (): [number, number, number] => {
+  const pushAt = (angR: number, depth: number, ringBoost: number) => {
     const theta = rnd() * Math.PI * 2;
     const phi = Math.acos(2 * rnd() - 1);
-    return [Math.sin(phi) * Math.cos(theta), Math.sin(phi) * Math.sin(theta), Math.cos(phi)];
+    out.push({
+      nx: Math.sin(phi) * Math.cos(theta),
+      ny: Math.sin(phi) * Math.sin(theta),
+      nz: Math.cos(phi),
+      angR, depth, ringBoost,
+    });
   };
-  const push = (nx: number, ny: number, nz: number, angR: number, depth: number, ringBoost: number) => {
-    out.push({ nx, ny, nz, angR, depth, ringBoost });
-  };
-
-  // Quelques cratères "notables" (plus gros) répartis aléatoirement
-  for (let i = 0; i < 5; i++) {
-    const [nx, ny, nz] = randomUnit();
-    push(nx, ny, nz, 0.040 + rnd() * 0.022, 0.42 + rnd() * 0.18, 0.55 + rnd() * 0.25);
-  }
-
-  // Amas de cratères moyens : on choisit quelques centres puis on disperse autour
-  const numClusters = 4 + Math.floor(rnd() * 3); // 4-6 amas
-  for (let c = 0; c < numClusters; c++) {
-    const [cx, cy, cz] = randomUnit();
-    const spread = 0.07 + rnd() * 0.06; // dispersion angulaire de l'amas
-    const inCluster = 5 + Math.floor(rnd() * 5); // 5-9 cratères par amas
-    for (let i = 0; i < inCluster; i++) {
-      // Perturbation gaussienne approximative du vecteur central, puis renorm sphérique
-      const ox = (rnd() - 0.5) * spread * 2;
-      const oy = (rnd() - 0.5) * spread * 2;
-      const oz = (rnd() - 0.5) * spread * 2;
-      let nx = cx + ox, ny = cy + oy, nz = cz + oz;
-      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-      nx /= len; ny /= len; nz /= len;
-      push(nx, ny, nz, 0.022 + rnd() * 0.016, 0.30 + rnd() * 0.18, 0.40 + rnd() * 0.25);
-    }
-  }
-
-  // Quelques cratères moyens isolés pour casser la régularité des amas
-  for (let i = 0; i < 10; i++) {
-    const [nx, ny, nz] = randomUnit();
-    push(nx, ny, nz, 0.020 + rnd() * 0.014, 0.26 + rnd() * 0.16, 0.35 + rnd() * 0.25);
-  }
-
+  // Quelques cratères "notables" (mais beaucoup plus petits qu'auparavant)
+  for (let i = 0; i < 5; i++) pushAt(0.038 + rnd() * 0.022, 0.35 + rnd() * 0.18, 0.55 + rnd() * 0.25);
+  // Moyens
+  for (let i = 0; i < 28; i++) pushAt(0.018 + rnd() * 0.014, 0.22 + rnd() * 0.16, 0.35 + rnd() * 0.25);
+  // Petits
+  for (let i = 0; i < 95; i++) pushAt(0.009 + rnd() * 0.009, 0.16 + rnd() * 0.14, 0.25 + rnd() * 0.2);
+  // Micro impacts (très denses)
+  for (let i = 0; i < 180; i++) pushAt(0.0045 + rnd() * 0.0055, 0.10 + rnd() * 0.10, 0.18 + rnd() * 0.15);
   return out;
 }
 
@@ -547,7 +526,7 @@ const spriteImgCache = new Map<string, HTMLImageElement>();
 function buildSpriteUrl(publicId: string): string | null {
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   if (!cloud) return null;
-  // f_auto + c_fit + w_512 : Cloudinary livre la meilleure représentation pour le navigateur
+  // f_auto + c_fit + w_512 : Cloudinary livre la meilleure représentation
   return `https://res.cloudinary.com/${cloud}/image/upload/w_512,c_fit,f_auto/${publicId}`;
 }
 
@@ -570,4 +549,101 @@ function getSprite(type: PlanetType, variant: PlanetVariant): HTMLImageElement |
 }
 
 function drawSpritePlanet(
-  ctx: CanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number,
+  img: HTMLImageElement,
+) {
+  const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
+  // Sprite plat sans halo : on fait tenir l'image dans le carré (2r x 2r)
+  // en conservant le ratio (contain).
+  let w: number, h: number;
+  if (aspect >= 1) {
+    w = r * 2;
+    h = (r * 2) / aspect;
+  } else {
+    h = r * 2;
+    w = (r * 2) * aspect;
+  }
+  ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+}
+
+
+/**
+ * Dessine une planète au point (cx, cy) avec rayon r.
+ * type, variant, seed déterminent la texture (cachée).
+ * time (ms) permet l'animation des nuages.
+ */
+export function drawPlanet(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number,
+  type: PlanetType, variant: PlanetVariant, seed: number,
+  time: number = 0,
+) {
+  // --- Sprite override (Cloudinary, certaines variantes "other") ---
+  // Si la variante a un public_id et que l'image est chargée, on dessine
+  // un sprite plat sans halo / ombrage / atmosphère et on retourne.
+  const sprite = getSprite(type, variant);
+  if (sprite) {
+    drawSpritePlanet(ctx, cx, cy, r, sprite);
+    return;
+  }
+
+  const palette = PALETTES[type]?.[variant] ?? PALETTES.rocky[1];
+
+  // --- Halo atmospherique extérieur ---
+  const haloR = r * 1.35;
+  const haloGrad = ctx.createRadialGradient(cx, cy, r * 0.95, cx, cy, haloR);
+  haloGrad.addColorStop(0, palette.glow);
+  haloGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = haloGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // --- Disque planétaire (clip) ---
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+
+  // Texture cachée blitée
+  const tex = getTextureCanvas(type, variant, seed);
+  ctx.drawImage(tex as CanvasImageSource, cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+
+  // Nuages animés (translation horizontale)
+  if (palette.hasClouds && palette.cloudColor) {
+    const clouds = getCloudCanvas(seed + 9999, palette.cloudColor);
+    const offset = ((time * 0.000012 * r) % (r * 2));
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - r * 2 - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+    ctx.globalAlpha = 1;
+  }
+
+  // --- Ombrage sphérique (lumière haut-gauche) ---
+  const shade = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+  shade.addColorStop(0, "rgba(255, 255, 255, 0.16)");
+  shade.addColorStop(0.45, "rgba(255, 255, 255, 0)");
+  shade.addColorStop(1, "rgba(0, 0, 0, 0.65)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  // --- Terminator (ombre cote nuit, plus marquee) ---
+  const term = ctx.createRadialGradient(cx + r * 0.55, cy + r * 0.4, r * 0.2, cx, cy, r);
+  term.addColorStop(0, "rgba(0, 0, 0, 0.65)");
+  term.addColorStop(0.55, "rgba(0, 0, 0, 0.2)");
+  term.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = term;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  // --- Rim light (atmosphere bord) ---
+  if (palette.hasClouds || palette.variant === "continents") {
+    const rim = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
+    rim.addColorStop(0, "rgba(127, 200, 255, 0)");
+    rim.addColorStop(1, "rgba(127, 200, 255, 0.35)");
+    ctx.fillStyle = rim;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+
+  ctx.restore();
+}
