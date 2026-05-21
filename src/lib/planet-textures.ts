@@ -537,10 +537,10 @@ function getCloudCanvas(seed: number, cloudColor: [number, number, number]): HTM
 // de fallback tant que l'image n'est pas encore disponible.
 type SpriteKey = `${PlanetType}-${PlanetVariant}`;
 const SPRITE_PUBLIC_IDS: Partial<Record<SpriteKey, string>> = {
-  "other-1": "campaignator/other_v1", // station gothique
-  "other-2": "campaignator/other_v2", // épave / ruine flottante
-  "other-3": "campaignator/other_v3", // champ d'astéroïdes
-  "other-4": "campaignator/other_v4", // mine astéroïdale
+  "other-1": "campaignatorother_v1_tg4rp2", // station gothique
+  "other-2": "campaignatorother_v2_m8k0hb", // épave / ruine flottante
+  "other-3": "campaignatorother_v3_q8e8ub", // champ d'astéroïdes
+  "other-4": "campaignatorother_v4_pbcthm", // mine astéroïdale
 };
 const spriteImgCache = new Map<string, HTMLImageElement>();
 
@@ -570,5 +570,4 @@ function getSprite(type: PlanetType, variant: PlanetVariant): HTMLImageElement |
 }
 
 function drawSpritePlanet(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: numb
+  ctx: CanvasRenderingContext2D
