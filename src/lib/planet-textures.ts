@@ -531,50 +531,44 @@ function getCloudCanvas(seed: number, cloudColor: [number, number, number]): HTM
   return canvas;
 }
 
-/**
- * Dessine une planète au point (cx, cy) avec rayon r.
- * type, variant, seed déterminent la texture (cachée).
- * time (ms) permet l'animation des nuages.
- */
-export function drawPlanet(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number, r: number,
-  type: PlanetType, variant: PlanetVariant, seed: number,
-  time: number = 0,
-) {
-  const palette = PALETTES[type]?.[variant] ?? PALETTES.rocky[1];
+// ---------- Sprite cache (Cloudinary) pour certaines variantes "other" ----------
+// On peut remplacer une variante par un PNG hébergé sur Cloudinary.
+// Les images sont chargées à la demande, mises en cache, et le rendu procédural sert
+// de fallback tant que l'image n'est pas encore disponible.
+type SpriteKey = `${PlanetType}-${PlanetVariant}`;
+const SPRITE_PUBLIC_IDS: Partial<Record<SpriteKey, string>> = {
+  "other-1": "campaignator/other_v1", // station gothique
+  "other-2": "campaignator/other_v2", // épave / ruine flottante
+  "other-3": "campaignator/other_v3", // champ d'astéroïdes
+  "other-4": "campaignator/other_v4", // mine astéroïdale
+};
+const spriteImgCache = new Map<string, HTMLImageElement>();
 
-  // --- Halo atmospherique extérieur ---
-  const haloR = r * 1.35;
-  const haloGrad = ctx.createRadialGradient(cx, cy, r * 0.95, cx, cy, haloR);
-  haloGrad.addColorStop(0, palette.glow);
-  haloGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = haloGrad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
-  ctx.fill();
+function buildSpriteUrl(publicId: string): string | null {
+  const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  if (!cloud) return null;
+  // f_auto + c_fit + w_512 : Cloudinary livre la meilleure représentation pour le navigateur
+  return `https://res.cloudinary.com/${cloud}/image/upload/w_512,c_fit,f_auto/${publicId}`;
+}
 
-  // --- Disque planétaire (clip) ---
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.clip();
-
-  // Texture cachée blitée
-  const tex = getTextureCanvas(type, variant, seed);
-  ctx.drawImage(tex as CanvasImageSource, cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
-
-  // Nuages animés (translation horizontale)
-  if (palette.hasClouds && palette.cloudColor) {
-    const clouds = getCloudCanvas(seed + 9999, palette.cloudColor);
-    const offset = ((time * 0.000012 * r) % (r * 2));
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
-    ctx.drawImage(clouds as CanvasImageSource, cx - r + offset - r * 2 - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
-    ctx.globalAlpha = 1;
+function getSprite(type: PlanetType, variant: PlanetVariant): HTMLImageElement | null {
+  if (typeof window === "undefined") return null;
+  const publicId = SPRITE_PUBLIC_IDS[(type + "-" + variant) as SpriteKey];
+  if (!publicId) return null;
+  const url = buildSpriteUrl(publicId);
+  if (!url) return null;
+  const cached = spriteImgCache.get(url);
+  if (cached) {
+    if (cached.complete && cached.naturalWidth > 0) return cached;
+    return null; // chargement en cours
   }
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = url;
+  spriteImgCache.set(url, img);
+  return null;
+}
 
-  // --- Ombrage sphérique (lumière haut-gauche) ---
-  const shade = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
-  shade.addColorStop(0, "rgba(255, 255, 255, 0.16)");
-  shade.addColo
+function drawSpritePlanet(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: numb
