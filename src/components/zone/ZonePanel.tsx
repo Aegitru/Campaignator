@@ -51,7 +51,7 @@ export default function ZonePanel() {
       <div className={`fixed inset-0 z-30 transition-opacity duration-300 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         style={{ background: "rgba(0, 0, 0, 0.45)" }} onClick={closeZone} aria-hidden />
 
-      <aside className={`fixed top-0 left-0 bottom-0 z-40 w-full sm:w-[440px] transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed top-16 md:top-0 left-0 bottom-0 z-40 w-full sm:w-[440px] transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="hud-panel hud-panel--strong h-full flex flex-col"
           style={{ padding: 0, clipPath: "none", border: "none", borderRight: "1px solid var(--border-strong)", background: "rgba(5, 15, 30, 0.95)" }}>
           <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3 relative" style={{ borderBottom: "1px solid var(--border-faded)" }}>

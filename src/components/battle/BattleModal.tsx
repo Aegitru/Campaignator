@@ -60,12 +60,12 @@ export default function BattleModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-2 py-2 md:px-4 md:py-8"
       style={{ background: "rgba(0, 0, 0, 0.72)", backdropFilter: "blur(6px)" }}
       onClick={closeBattle}
     >
       <div
-        className="hud-panel hud-panel--strong relative max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className="hud-panel hud-panel--strong relative max-w-3xl w-full max-h-[calc(100dvh-1rem)] md:max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
         style={{ padding: 0 }}
       >

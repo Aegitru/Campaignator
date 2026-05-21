@@ -23,6 +23,8 @@ export default function PermanentHud() {
     if (!mq) return;
     const update = () => setIsMobile(mq.matches);
     update();
+    // Repli automatique sur mobile au premier rendu
+    if (mq.matches) setCollapsed(true);
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);

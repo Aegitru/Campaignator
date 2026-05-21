@@ -43,7 +43,7 @@ export default function SystemInfoModal({ system, planets, campaignId, canEdit, 
     <>
       <div className="fixed inset-0 z-30 transition-opacity duration-300 opacity-100 pointer-events-auto"
         style={{ background: "rgba(0, 0, 0, 0.45)" }} onClick={onClose} aria-hidden />
-      <aside className="fixed top-0 left-0 bottom-0 z-40 w-full sm:w-[440px] transition-transform duration-300 ease-out translate-x-0">
+      <aside className="fixed top-16 md:top-0 left-0 bottom-0 z-40 w-full sm:w-[440px] transition-transform duration-300 ease-out translate-x-0">
         <div className="hud-panel hud-panel--strong h-full flex flex-col"
           style={{ padding: 0, clipPath: "none", border: "none", borderRight: "1px solid var(--border-strong)", background: "rgba(5, 15, 30, 0.95)" }}>
           <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3" style={{ borderBottom: "1px solid var(--border-faded)" }}>
