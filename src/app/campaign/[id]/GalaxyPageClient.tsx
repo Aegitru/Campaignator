@@ -50,7 +50,7 @@ function GalaxyInner({ bundle }: { bundle: CampaignBundle }) {
       </div>
 
       {/* Header flottant top-left */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2 max-w-[380px]">
+      <div className="absolute z-20 flex flex-col gap-2 md:top-6 md:left-6 md:right-auto md:bottom-auto md:max-w-[380px] bottom-2 left-2 right-2 safe-bottom">
         <Link href="/" className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ ACCUEIL
         </Link>

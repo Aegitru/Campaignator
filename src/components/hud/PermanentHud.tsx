@@ -17,6 +17,15 @@ export default function PermanentHud() {
   const editing = isCampaignUnlocked(campaign.id);
 
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)") : null;
+    if (!mq) return;
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusDraft, setStatusDraft] = useState(campaign.status_text);
   const [savingStatus, setSavingStatus] = useState(false);
@@ -58,17 +67,18 @@ export default function PermanentHud() {
       className="hud-panel hud-panel--strong"
       style={{
         position: "fixed",
-        top: "1.5rem",
-        right: "1.5rem",
-        bottom: expanded ? "1.5rem" : "auto",
-        left: "auto",
+        top: isMobile ? "0.5rem" : "1.5rem",
+        right: isMobile ? "0.5rem" : "1.5rem",
+        left: isMobile ? "0.5rem" : "auto",
+        bottom: expanded ? (isMobile ? "55vh" : "1.5rem") : "auto",
         zIndex: 50,
-        width: "360px",
-        maxWidth: "calc(100vw - 3rem)",
-        padding: "14px 16px",
+        width: isMobile ? "auto" : "360px",
+        maxWidth: isMobile ? "none" : "calc(100vw - 3rem)",
+        padding: isMobile ? "10px 12px" : "14px 16px",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        maxHeight: isMobile && expanded ? "45vh" : "none",
       }}
     >
       <div className="flex items-center justify-between gap-2 mb-2 flex-shrink-0">

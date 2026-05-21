@@ -53,7 +53,7 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
       </div>
 
       {/* Header overlay top-left */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-2" style={{ maxWidth: "380px" }}>
+      <div className="absolute z-20 flex flex-col gap-2 md:top-6 md:left-6 md:right-auto md:bottom-auto md:max-w-[380px] bottom-2 left-2 right-2 safe-bottom">
         <Link href={`/system/${systemId}`} className="hud-button"
           style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
           ◂ SYSTEME
@@ -85,7 +85,7 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
       </div>
 
       {/* Footer overlay bottom-left */}
-      <div className="absolute bottom-6 left-6 z-20 flex items-center gap-4">
+      <div className="absolute bottom-6 left-6 z-20 hidden md:flex items-center gap-4">
         <div className="hud-label hud-pulse" style={{ color: "var(--accent-blue)" }}>◉ SURFACE SCAN</div>
         <div className="hud-label">{zones.length} ZONE{zones.length > 1 ? "S" : ""} CARTOGRAPHIEE{zones.length > 1 ? "S" : ""}</div>
         {planet.has_moon && <div className="hud-label" style={{ color: "var(--text-faded)" }}>1 LUNE</div>}

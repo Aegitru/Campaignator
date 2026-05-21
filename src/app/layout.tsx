@@ -23,6 +23,14 @@ export const metadata: Metadata = {
   description: "Journal de bord narratif pour campagne Warhammer 40 000.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover" as const,
+  themeColor: "#050810",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
