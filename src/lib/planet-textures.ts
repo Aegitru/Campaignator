@@ -264,28 +264,49 @@ function mulberry32(seed: number): () => number {
 
 interface Crater { nx: number; ny: number; nz: number; angR: number; depth: number; ringBoost: number }
 
-/** Distribution dense de cratères de tailles variées mais toutes petites */
+/** Distribution centrée sur les tailles moyennes, organisée en amas */
 function makeCraters(seed: number): Crater[] {
   const rnd = mulberry32(seed + 31337);
   const out: Crater[] = [];
-  const pushAt = (angR: number, depth: number, ringBoost: number) => {
+  const randomUnit = (): [number, number, number] => {
     const theta = rnd() * Math.PI * 2;
     const phi = Math.acos(2 * rnd() - 1);
-    out.push({
-      nx: Math.sin(phi) * Math.cos(theta),
-      ny: Math.sin(phi) * Math.sin(theta),
-      nz: Math.cos(phi),
-      angR, depth, ringBoost,
-    });
+    return [Math.sin(phi) * Math.cos(theta), Math.sin(phi) * Math.sin(theta), Math.cos(phi)];
   };
-  // Quelques cratères "notables" (mais beaucoup plus petits qu'auparavant)
-  for (let i = 0; i < 5; i++) pushAt(0.038 + rnd() * 0.022, 0.35 + rnd() * 0.18, 0.55 + rnd() * 0.25);
-  // Moyens
-  for (let i = 0; i < 28; i++) pushAt(0.018 + rnd() * 0.014, 0.22 + rnd() * 0.16, 0.35 + rnd() * 0.25);
-  // Petits
-  for (let i = 0; i < 95; i++) pushAt(0.009 + rnd() * 0.009, 0.16 + rnd() * 0.14, 0.25 + rnd() * 0.2);
-  // Micro impacts (très denses)
-  for (let i = 0; i < 180; i++) pushAt(0.0045 + rnd() * 0.0055, 0.10 + rnd() * 0.10, 0.18 + rnd() * 0.15);
+  const push = (nx: number, ny: number, nz: number, angR: number, depth: number, ringBoost: number) => {
+    out.push({ nx, ny, nz, angR, depth, ringBoost });
+  };
+
+  // Quelques cratères "notables" (plus gros) répartis aléatoirement
+  for (let i = 0; i < 5; i++) {
+    const [nx, ny, nz] = randomUnit();
+    push(nx, ny, nz, 0.040 + rnd() * 0.022, 0.42 + rnd() * 0.18, 0.55 + rnd() * 0.25);
+  }
+
+  // Amas de cratères moyens : on choisit quelques centres puis on disperse autour
+  const numClusters = 4 + Math.floor(rnd() * 3); // 4-6 amas
+  for (let c = 0; c < numClusters; c++) {
+    const [cx, cy, cz] = randomUnit();
+    const spread = 0.07 + rnd() * 0.06; // dispersion angulaire de l'amas
+    const inCluster = 5 + Math.floor(rnd() * 5); // 5-9 cratères par amas
+    for (let i = 0; i < inCluster; i++) {
+      // Perturbation gaussienne approximative du vecteur central, puis renorm sphérique
+      const ox = (rnd() - 0.5) * spread * 2;
+      const oy = (rnd() - 0.5) * spread * 2;
+      const oz = (rnd() - 0.5) * spread * 2;
+      let nx = cx + ox, ny = cy + oy, nz = cz + oz;
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      nx /= len; ny /= len; nz /= len;
+      push(nx, ny, nz, 0.022 + rnd() * 0.016, 0.30 + rnd() * 0.18, 0.40 + rnd() * 0.25);
+    }
+  }
+
+  // Quelques cratères moyens isolés pour casser la régularité des amas
+  for (let i = 0; i < 10; i++) {
+    const [nx, ny, nz] = randomUnit();
+    push(nx, ny, nz, 0.020 + rnd() * 0.014, 0.26 + rnd() * 0.16, 0.35 + rnd() * 0.25);
+  }
+
   return out;
 }
 
@@ -556,27 +577,4 @@ export function drawPlanet(
   // --- Ombrage sphérique (lumière haut-gauche) ---
   const shade = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
   shade.addColorStop(0, "rgba(255, 255, 255, 0.16)");
-  shade.addColorStop(0.45, "rgba(255, 255, 255, 0)");
-  shade.addColorStop(1, "rgba(0, 0, 0, 0.65)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-
-  // --- Terminator (ombre cote nuit, plus marquee) ---
-  const term = ctx.createRadialGradient(cx + r * 0.55, cy + r * 0.4, r * 0.2, cx, cy, r);
-  term.addColorStop(0, "rgba(0, 0, 0, 0.65)");
-  term.addColorStop(0.55, "rgba(0, 0, 0, 0.2)");
-  term.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = term;
-  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-
-  // --- Rim light (atmosphere bord) ---
-  if (palette.hasClouds || palette.variant === "continents") {
-    const rim = ctx.createRadialGradient(cx, cy, r * 0.88, cx, cy, r);
-    rim.addColorStop(0, "rgba(127, 200, 255, 0)");
-    rim.addColorStop(1, "rgba(127, 200, 255, 0.35)");
-    ctx.fillStyle = rim;
-    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-  }
-
-  ctx.restore();
-}
+  shade.addColo
