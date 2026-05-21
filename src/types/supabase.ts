@@ -35,7 +35,7 @@ export interface Database {
     Functions: Record<string, never>;
     Enums: {
       star_type_enum:   "yellow_dwarf" | "red_giant" | "white_dwarf" | "neutron" | "binary";
-      planet_type_enum: "rocky" | "gaseous" | "oceanic" | "dead" | "fortress";
+      planet_type_enum: "rocky" | "gaseous" | "oceanic" | "dead" | "other";
     };
   };
 }

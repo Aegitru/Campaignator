@@ -179,39 +179,6 @@ const PALETTES: Record<PlanetType, Record<PlanetVariant, BiomePalette>> = {
       ]
     }
   },
-  fortress: {
-    1: { variant: "metallic", glow: "rgba(180, 200, 230, 0.4)", hasClouds: false,
-      bands: [
-        { at: 0.00, color: [25, 30, 40] },
-        { at: 0.50, color: [80, 95, 115] },
-        { at: 0.80, color: [160, 180, 200] },
-        { at: 1.00, color: [220, 230, 245] }
-      ]
-    },
-    2: { variant: "metallic", glow: "rgba(230, 190, 130, 0.38)", hasClouds: false,
-      bands: [
-        { at: 0.00, color: [60, 40, 16] },
-        { at: 0.50, color: [150, 110, 60] },
-        { at: 0.80, color: [220, 170, 100] },
-        { at: 1.00, color: [240, 210, 150] }
-      ]
-    },
-    3: { variant: "metallic", glow: "rgba(80, 100, 140, 0.30)", hasClouds: false,
-      bands: [
-        { at: 0.00, color: [4, 6, 12] },
-        { at: 0.50, color: [25, 32, 50] },
-        { at: 0.80, color: [60, 75, 100] },
-        { at: 1.00, color: [120, 140, 180] }
-      ]
-    },
-    4: { variant: "metallic", glow: "rgba(220, 235, 255, 0.55)", hasClouds: false,
-      bands: [
-        { at: 0.00, color: [180, 195, 220] },
-        { at: 0.50, color: [220, 230, 245] },
-        { at: 1.00, color: [250, 252, 255] }
-      ]
-    }
-  }  ,
   other: {
     1: { variant: "asteroid", glow: "rgba(160, 130, 90, 0.25)", hasClouds: false,
       bands: [

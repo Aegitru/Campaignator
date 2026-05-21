@@ -60,8 +60,6 @@ export default function SystemView({
       const radiusFactor =
         p.planet_type === "gaseous"
           ? 0.052
-          : p.planet_type === "fortress"
-          ? 0.034
           : p.planet_type === "dead"
           ? 0.032
           : 0.038;
@@ -277,7 +275,6 @@ function planetTypeLabel(t: Planet["planet_type"]): string {
     gaseous: "Geante gazeuse",
     oceanic: "Monde oceanique",
     dead: "Monde mort",
-    fortress: "Monde-forteresse",
     other: "Objet spatial",
   };
   return labels[t];

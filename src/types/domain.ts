@@ -10,7 +10,7 @@ export type StarType =
   | "neutron"
   | "binary";
 
-export type PlanetType = "rocky" | "gaseous" | "oceanic" | "dead" | "fortress" | "other";
+export type PlanetType = "rocky" | "gaseous" | "oceanic" | "dead" | "other";
 export type PlanetVariant = 1 | 2 | 3 | 4;
 
 export interface Campaign {

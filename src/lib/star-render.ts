@@ -1,80 +1,108 @@
 import type { StarType } from "@/types/domain";
-import { fbm, ridge, smoothstep, mixRgb } from "@/lib/noise";
+import { fbm, ridge, smoothstep, mixRgb, warpedFbm } from "@/lib/noise";
 
 /**
- * Rendu d'etoile en 3 couches :
- *   1. Photosphère : granulation fBM avec mapping de température (corps noir approxime)
- *   2. Taches solaires : ridge inversé masqué (zones plus froides locales)
- *   3. Corona : halo radial multi-couches anime avec flares
+ * Rendu d'etoile en 2 strategies :
+ *  - "smooth"  : surface quasi uniforme et lumineuse (white_dwarf, neutron)
+ *  - "lava"    : surface type magma rouge/orange avec taches plus foncees (yellow_dwarf, red_giant)
  *
- * La photosphère est cachée dans une OffscreenCanvas par star_type+seed.
- * On la régénère à intervalle pour donner un effet "vivant" (pas a chaque frame).
+ * La photosphere est rendue UNE SEULE FOIS (cache forever par star_type + seed).
+ * L'animation passe uniquement par des overlays additifs dessines a chaque frame :
+ *  - hot spots qui derivent lentement
+ *  - respiration globale (alpha)
+ *  - corona / halo / flares
  */
 
+type Surface = "smooth" | "lava";
+
 export interface StarRenderConfig {
-  /** Couleur d'une zone "chaude" (max temp) */
+  surface: Surface;
+  /** Couleur la plus chaude (pics) */
   hot: [number, number, number];
-  /** Couleur d'une zone "froide" (granulation moins lumineuse) */
-  cool: [number, number, number];
-  /** Couleur des taches (sunspots) */
+  /** Couleur de base (croute lave ou ton dominant pour smooth) */
+  base: [number, number, number];
+  /** Couleur des taches plus foncees */
   spot: [number, number, number];
-  /** Couleur corona externe (rgba) */
+  /** Couleur du noyau central additif */
+  core: [number, number, number];
+  /** Couleur des hot spots animes (overlay) */
+  emberHot: [number, number, number];
+  /** Corona externe (rgba) */
   coronaOuter: string;
-  /** Couleur corona intermediaire (rgba) */
+  /** Corona intermediaire (rgba) */
   coronaMid: string;
-  /** Couleur corona proche surface */
+  /** Corona proche surface */
   coronaInner: string;
-  /** Echelle (multiplie le rayon) */
   scale: number;
-  /** Frequence des flares (rayons solaires) */
   flares: number;
-  /** Frequence de pulsation */
   pulse: number;
 }
 
 export const STAR_RENDER: Record<StarType, StarRenderConfig> = {
   yellow_dwarf: {
-    hot: [255, 245, 200], cool: [240, 160, 60], spot: [110, 40, 10],
-    coronaOuter: "rgba(255, 140, 40, 0)",
-    coronaMid: "rgba(255, 165, 60, 0.18)",
-    coronaInner: "rgba(255, 220, 140, 0.55)",
+    surface: "lava",
+    hot:  [255, 210, 90],
+    base: [205,  70,  10],
+    spot: [ 95,  25,   5],
+    core: [255, 240, 180],
+    emberHot: [255, 200, 80],
+    coronaOuter: "rgba(255, 120,  30, 0)",
+    coronaMid:   "rgba(255, 150,  50, 0.22)",
+    coronaInner: "rgba(255, 210, 120, 0.55)",
     scale: 1.0, flares: 1.0, pulse: 1.0,
   },
   red_giant: {
-    hot: [255, 200, 130], cool: [220, 60, 20], spot: [80, 8, 4],
-    coronaOuter: "rgba(180, 40, 12, 0)",
-    coronaMid: "rgba(220, 70, 30, 0.20)",
-    coronaInner: "rgba(255, 140, 80, 0.5)",
+    surface: "lava",
+    hot:  [255, 150,  60],
+    base: [160,  35,  10],
+    spot: [ 60,  10,   3],
+    core: [255, 180, 100],
+    emberHot: [255, 120, 40],
+    coronaOuter: "rgba(180,  35,  10, 0)",
+    coronaMid:   "rgba(220,  70,  30, 0.22)",
+    coronaInner: "rgba(255, 140,  80, 0.5)",
     scale: 1.55, flares: 1.4, pulse: 0.7,
   },
   white_dwarf: {
-    hot: [255, 255, 255], cool: [200, 220, 255], spot: [100, 130, 180],
-    coronaOuter: "rgba(120, 180, 255, 0)",
-    coronaMid: "rgba(180, 220, 255, 0.20)",
-    coronaInner: "rgba(240, 250, 255, 0.6)",
-    scale: 0.7, flares: 0.6, pulse: 1.4,
+    surface: "smooth",
+    hot:  [255, 255, 255],
+    base: [230, 240, 255],
+    spot: [200, 220, 245],
+    core: [255, 255, 255],
+    emberHot: [255, 255, 255],
+    coronaOuter: "rgba(150, 200, 255, 0)",
+    coronaMid:   "rgba(200, 230, 255, 0.22)",
+    coronaInner: "rgba(245, 250, 255, 0.65)",
+    scale: 0.7, flares: 0.5, pulse: 1.4,
   },
   neutron: {
-    hot: [255, 255, 255], cool: [180, 220, 255], spot: [80, 120, 200],
-    coronaOuter: "rgba(160, 200, 255, 0)",
-    coronaMid: "rgba(200, 230, 255, 0.30)",
-    coronaInner: "rgba(255, 255, 255, 0.75)",
-    scale: 0.55, flares: 0.4, pulse: 2.2,
+    surface: "smooth",
+    hot:  [255, 255, 255],
+    base: [210, 235, 255],
+    spot: [170, 210, 250],
+    core: [255, 255, 255],
+    emberHot: [220, 240, 255],
+    coronaOuter: "rgba(140, 200, 255, 0)",
+    coronaMid:   "rgba(190, 230, 255, 0.32)",
+    coronaInner: "rgba(255, 255, 255, 0.78)",
+    scale: 0.55, flares: 0.3, pulse: 2.2,
   },
   binary: {
-    hot: [255, 245, 200], cool: [240, 160, 60], spot: [110, 40, 10],
-    coronaOuter: "rgba(255, 140, 40, 0)",
-    coronaMid: "rgba(255, 165, 60, 0.18)",
-    coronaInner: "rgba(255, 220, 140, 0.55)",
+    surface: "lava",
+    hot:  [255, 210,  90],
+    base: [205,  70,  10],
+    spot: [ 95,  25,   5],
+    core: [255, 240, 180],
+    emberHot: [255, 200, 80],
+    coronaOuter: "rgba(255, 120, 30, 0)",
+    coronaMid:   "rgba(255, 150, 50, 0.22)",
+    coronaInner: "rgba(255, 210, 120, 0.55)",
     scale: 0.85, flares: 1.0, pulse: 1.0,
   },
 };
 
-// Cache : on regenere la photosphere toutes les FRAME_INTERVAL_MS pour effet d'animation
-const PHOTO_SIZE = 192;
-const FRAME_INTERVAL_MS = 220; // ~4.5 "frames" par seconde, suffisant pour effet vivant
-interface PhotoCache { canvas: HTMLCanvasElement | OffscreenCanvas; lastUpdate: number; phase: number }
-const photoCache = new Map<string, PhotoCache>();
+const PHOTO_SIZE = 256;
+const photoCache = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
 
 function makeOffscreen(size: number): HTMLCanvasElement | OffscreenCanvas {
   if (typeof OffscreenCanvas !== "undefined") return new OffscreenCanvas(size, size);
@@ -83,10 +111,7 @@ function makeOffscreen(size: number): HTMLCanvasElement | OffscreenCanvas {
   return c;
 }
 
-function renderPhotosphere(
-  starType: StarType, seed: number, phase: number
-): HTMLCanvasElement | OffscreenCanvas {
-  const cfg = STAR_RENDER[starType];
+function renderLava(seed: number, cfg: StarRenderConfig): HTMLCanvasElement | OffscreenCanvas {
   const canvas = makeOffscreen(PHOTO_SIZE);
   const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
   if (!ctx) return canvas;
@@ -102,68 +127,120 @@ function renderPhotosphere(
       const d2 = dx * dx + dy * dy;
       if (d2 > 1) continue;
       const z = Math.sqrt(1 - d2);
-      const ux = (dx / (z + 0.5)) * 2 + phase * 0.3;
-      const uy = dy * 2 + phase * 0.15;
+      // Projection sphere -> UV en gardant compte de l'inclinaison
+      const ux = (dx / (z + 0.4)) * 1.8;
+      const uy = (dy / (z + 0.4)) * 1.8;
 
-      // Granulation : fBM moyenne frequence
-      const granule = fbm(ux * 4.5, uy * 4.5, seed, 4);
-      // Regions plus chaudes : fBM basse frequence
-      const hotRegion = fbm(ux * 1.5, uy * 1.5, seed + 700, 3);
-      // Spots : ridge inverse, ne garde que pics
-      const spotRaw = ridge(ux * 2.2, uy * 2.2, seed + 1500, 3);
-      const spotMask = smoothstep(0.78, 0.95, spotRaw);
+      // Granulation fine (cellules de convection)
+      const granule = fbm(ux * 5.5, uy * 5.5, seed, 4);
+      // Veines de lave chaude basse frequence avec domain warp
+      const veins = warpedFbm(ux * 2.2, uy * 2.2, seed + 700, 1.2);
+      // Taches plus foncees (zones moins chaudes)
+      const spotRaw = ridge(ux * 1.8, uy * 1.8, seed + 1500, 3);
+      const spotMask = smoothstep(0.62, 0.88, spotRaw);
 
-      // Temperature locale [0,1]
-      let temp = granule * 0.6 + hotRegion * 0.5;
+      // Temperature normalisee : combine granulation + veines
+      let temp = granule * 0.45 + veins * 0.65;
       temp = Math.max(0, Math.min(1, temp));
+      // Boost contraste pour effet lave
+      temp = Math.pow(temp, 0.85);
 
-      // Couleur de base : interpolation cool -> hot
-      let color = mixRgb(cfg.cool, cfg.hot, temp);
+      // Couleur base -> hot
+      let color = mixRgb(cfg.base, cfg.hot, temp);
 
-      // Centre de l'etoile plus brillant (effet de luminosite vue de face)
-      const centerGlow = 1 - d2;
-      color = [
-        color[0] + (255 - color[0]) * centerGlow * 0.4,
-        color[1] + (255 - color[1]) * centerGlow * 0.35,
-        color[2] + (255 - color[2]) * centerGlow * 0.3,
-      ];
-
-      // Application des spots (taches sombres locales)
+      // Taches sombres
       if (spotMask > 0) {
-        color = mixRgb(color as [number, number, number], cfg.spot, spotMask * 0.85);
+        color = mixRgb(color as [number, number, number], cfg.spot, spotMask * 0.7);
       }
 
+      // Brillance centrale (effet de luminosite vue de face)
+      const centerGlow = Math.pow(1 - d2, 1.2);
+      color = [
+        color[0] + (cfg.core[0] - color[0]) * centerGlow * 0.35,
+        color[1] + (cfg.core[1] - color[1]) * centerGlow * 0.30,
+        color[2] + (cfg.core[2] - color[2]) * centerGlow * 0.25,
+      ];
+
       // Limb darkening (assombrissement des bords)
-      const limb = 0.55 + 0.45 * z;
+      const limb = 0.5 + 0.5 * z;
       color = [color[0] * limb, color[1] * limb, color[2] * limb];
 
       const i = (py * PHOTO_SIZE + px) * 4;
-      data[i] = Math.min(255, color[0]);
+      data[i]     = Math.min(255, color[0]);
       data[i + 1] = Math.min(255, color[1]);
       data[i + 2] = Math.min(255, color[2]);
       data[i + 3] = 255;
     }
   }
-
   ctx.putImageData(img, 0, 0);
   return canvas;
 }
 
-function getPhotoCache(starType: StarType, seed: number, time: number): HTMLCanvasElement | OffscreenCanvas {
+function renderSmooth(seed: number, cfg: StarRenderConfig): HTMLCanvasElement | OffscreenCanvas {
+  const canvas = makeOffscreen(PHOTO_SIZE);
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+  if (!ctx) return canvas;
+  const img = ctx.createImageData(PHOTO_SIZE, PHOTO_SIZE);
+  const data = img.data;
+  const half = PHOTO_SIZE / 2;
+  const r = half;
+
+  for (let py = 0; py < PHOTO_SIZE; py++) {
+    for (let px = 0; px < PHOTO_SIZE; px++) {
+      const dx = (px - half) / r;
+      const dy = (py - half) / r;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 1) continue;
+      const z = Math.sqrt(1 - d2);
+      const ux = dx * 1.5;
+      const uy = dy * 1.5;
+
+      // Variation tres legere basse frequence
+      const subtle = fbm(ux * 1.2, uy * 1.2, seed, 3);
+      const t = 0.7 + subtle * 0.3;
+      let color: [number, number, number] = [
+        cfg.base[0] + (cfg.hot[0] - cfg.base[0]) * t,
+        cfg.base[1] + (cfg.hot[1] - cfg.base[1]) * t,
+        cfg.base[2] + (cfg.hot[2] - cfg.base[2]) * t,
+      ];
+
+      // Centre presque blanc pur
+      const centerGlow = Math.pow(1 - d2, 0.6);
+      color = [
+        color[0] + (255 - color[0]) * centerGlow * 0.55,
+        color[1] + (255 - color[1]) * centerGlow * 0.55,
+        color[2] + (255 - color[2]) * centerGlow * 0.55,
+      ];
+
+      // Limb darkening doux
+      const limb = 0.7 + 0.3 * z;
+      color = [color[0] * limb, color[1] * limb, color[2] * limb];
+
+      const i = (py * PHOTO_SIZE + px) * 4;
+      data[i]     = Math.min(255, color[0]);
+      data[i + 1] = Math.min(255, color[1]);
+      data[i + 2] = Math.min(255, color[2]);
+      data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
+function getPhotoCache(starType: StarType, seed: number): HTMLCanvasElement | OffscreenCanvas {
   const key = starType + "-" + (seed >>> 0);
   let entry = photoCache.get(key);
-  if (!entry || time - entry.lastUpdate > FRAME_INTERVAL_MS) {
-    const phase = (time * 0.0006) % 100;
-    const canvas = renderPhotosphere(starType, seed, phase);
-    entry = { canvas, lastUpdate: time, phase };
+  if (!entry) {
+    const cfg = STAR_RENDER[starType];
+    entry = cfg.surface === "lava" ? renderLava(seed, cfg) : renderSmooth(seed, cfg);
     photoCache.set(key, entry);
   }
-  return entry.canvas;
+  return entry;
 }
 
 /**
- * Dessine une étoile au point (cx, cy) avec un rayon de référence baseRadius.
- * starType determine la palette et le scale. time anime corona et photosphere.
+ * Dessine une etoile au point (cx, cy). La photosphere est statique (cachee).
+ * L'animation passe par des overlays additifs et la corona.
  */
 export function drawStar(
   ctx: CanvasRenderingContext2D,
@@ -174,7 +251,7 @@ export function drawStar(
   const r = baseRadius * cfg.scale;
   const pulse = 1 + 0.04 * Math.sin(time * 0.001 * cfg.pulse);
 
-  // ---- Halo externe (corona lointaine, pulse) ----
+  // ---- Halo externe ----
   const haloR = r * 4.8 * pulse;
   const halo = ctx.createRadialGradient(cx, cy, r * 1.0, cx, cy, haloR);
   halo.addColorStop(0, cfg.coronaInner);
@@ -185,7 +262,7 @@ export function drawStar(
   ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
   ctx.fill();
 
-  // ---- Couronne intermediaire (plus dense pres de la surface) ----
+  // ---- Couronne intermediaire ----
   const coronaR = r * 2.3 * pulse;
   const corona = ctx.createRadialGradient(cx, cy, r * 0.85, cx, cy, coronaR);
   corona.addColorStop(0, cfg.coronaInner);
@@ -196,17 +273,16 @@ export function drawStar(
   ctx.arc(cx, cy, coronaR, 0, Math.PI * 2);
   ctx.fill();
 
-  // ---- Flares (rayons solaires anime) ----
+  // ---- Flares (rayons) ----
   if (cfg.flares > 0.1) {
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(time * 0.00007);
     const rays = 18;
     for (let i = 0; i < rays; i++) {
       const a = (i / rays) * Math.PI * 2;
-      const len = r * (2.6 + Math.sin(time * 0.0012 + i * 1.7) * 0.5) * cfg.flares;
+      const len = r * (2.6 + Math.sin(time * 0.0009 + i * 1.7) * 0.45) * cfg.flares;
       const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
-      grad.addColorStop(0, "rgba(255, 220, 150, 0.32)");
+      grad.addColorStop(0, "rgba(255, 220, 150, 0.30)");
       grad.addColorStop(1, "rgba(255, 220, 150, 0)");
       ctx.strokeStyle = grad;
       ctx.lineWidth = 2;
@@ -218,24 +294,76 @@ export function drawStar(
     ctx.restore();
   }
 
-  // ---- Photosphère cachée ----
-  const photo = getPhotoCache(starType, Math.floor(cx + cy) | 0, time);
+  // ---- Photosphere statique cachee ----
+  const seed = Math.floor(cx * 31 + cy * 17 + r * 7) | 0;
+  const photo = getPhotoCache(starType, seed);
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.clip();
+
   ctx.drawImage(photo as CanvasImageSource, cx - r - 1, cy - r - 1, r * 2 + 2, r * 2 + 2);
+
+  // ---- Overlays animes (sur surface clippee) ----
+  if (cfg.surface === "lava") {
+    // 3 hot spots qui derivent lentement (additif)
+    ctx.globalCompositeOperation = "lighter";
+    const e = cfg.emberHot;
+    for (let i = 0; i < 3; i++) {
+      const phase = time * 0.00018 + i * 2.094; // 2pi/3
+      const ox = Math.cos(phase + i * 1.7) * r * 0.55;
+      const oy = Math.sin(phase * 1.3 + i * 2.1) * r * 0.55;
+      const breath = 0.45 + 0.35 * Math.sin(time * 0.0011 + i * 1.3);
+      const spotR = r * (0.45 + 0.1 * Math.sin(time * 0.0008 + i));
+      const g = ctx.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, spotR);
+      g.addColorStop(0, "rgba(" + e[0] + "," + e[1] + "," + e[2] + "," + (breath * 0.35) + ")");
+      g.addColorStop(0.5, "rgba(" + e[0] + "," + e[1] + "," + e[2] + "," + (breath * 0.12) + ")");
+      g.addColorStop(1, "rgba(" + e[0] + "," + e[1] + "," + e[2] + ",0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx + ox, cy + oy, spotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Respiration globale (subtile)
+    const breathAll = 0.18 + 0.10 * Math.sin(time * 0.0009);
+    const gAll = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    gAll.addColorStop(0, "rgba(255, 220, 140," + breathAll + ")");
+    gAll.addColorStop(1, "rgba(255, 220, 140, 0)");
+    ctx.fillStyle = gAll;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  } else {
+    // Smooth : juste un noyau central pulsant
+    ctx.globalCompositeOperation = "lighter";
+    const flicker = 0.55 + 0.30 * Math.sin(time * 0.0025 * cfg.pulse);
+    const inner = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.75);
+    inner.addColorStop(0, "rgba(255, 255, 255, " + (flicker * 0.55) + ")");
+    inner.addColorStop(0.5, "rgba(255, 255, 255, " + (flicker * 0.18) + ")");
+    inner.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = inner;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.75, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   ctx.restore();
 
-  // ---- Brillance centrale (overlay additif) ----
-  const flicker = 0.65 + 0.25 * Math.sin(time * 0.003 * cfg.pulse);
-  const inner = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.55);
-  inner.addColorStop(0, "rgba(255, 255, 255, " + (flicker * 0.6) + ")");
-  inner.addColorStop(1, "rgba(255, 255, 255, 0)");
-  ctx.globalCompositeOperation = "lighter";
-  ctx.fillStyle = inner;
+  // ---- Noyau central additif (toujours) ----
+  ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.globalCompositeOperation = "lighter";
+  const flicker = 0.55 + 0.25 * Math.sin(time * 0.003 * cfg.pulse);
+  const innerCore = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.4);
+  innerCore.addColorStop(0, "rgba(" + cfg.core[0] + "," + cfg.core[1] + "," + cfg.core[2] + "," + (flicker * 0.5) + ")");
+  innerCore.addColorStop(1, "rgba(" + cfg.core[0] + "," + cfg.core[1] + "," + cfg.core[2] + ",0)");
+  ctx.fillStyle = innerCore;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
+  ctx.restore();
 }

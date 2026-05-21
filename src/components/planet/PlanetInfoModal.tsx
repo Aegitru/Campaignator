@@ -9,7 +9,7 @@ import { apiEditCall } from "@/lib/api-edit";
 import PortalToBody from "@/components/overlays/PortalToBody";
 import QuickCreateModal from "@/components/edit/QuickCreateModal";
 
-const PLANET_TYPES = ["rocky", "gaseous", "oceanic", "dead", "fortress", "other"];
+const PLANET_TYPES = ["rocky", "gaseous", "oceanic", "dead", "other"];
 const VARIANTS = [1, 2, 3, 4];
 
 interface Props {

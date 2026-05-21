@@ -14,7 +14,7 @@ type Mode =
 interface Props { mode: Mode; onClose: () => void }
 
 const STAR_TYPES = ["yellow_dwarf", "red_giant", "white_dwarf", "neutron", "binary"];
-const PLANET_TYPES = ["rocky", "gaseous", "oceanic", "dead", "fortress", "other"];
+const PLANET_TYPES = ["rocky", "gaseous", "oceanic", "dead", "other"];
 const VARIANTS = [1, 2, 3, 4];
 
 export default function QuickCreateModal(props: Props) {
