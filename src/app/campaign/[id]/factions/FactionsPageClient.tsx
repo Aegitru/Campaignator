@@ -35,6 +35,7 @@ function FactionsInner({ bundle, units }: { bundle: CampaignBundle; units: Unit[
   const [editingFaction, setEditingFaction] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [creatingUnit, setCreatingUnit] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <div className="relative w-full" style={{ height: "100dvh" }}>
@@ -131,9 +132,38 @@ function FactionsInner({ bundle, units }: { bundle: CampaignBundle; units: Unit[
               )}
             </div>
           </div>
+
+          {editing && (
+            <div className="max-w-5xl mx-auto mt-8">
+              <div className="hud-panel p-4" style={{ borderColor: "#8b1a1a", background: "rgba(139,26,26,0.08)" }}>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="hud-label" style={{ color: "#ff7070" }}>ZONE DE DANGER</div>
+                    <p className="font-mono text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
+                      Supprime cette campagne et toutes ses données : factions, alliances, systèmes,
+                      planètes, zones, batailles. Action irréversible.
+                    </p>
+                  </div>
+                  <button onClick={() => setConfirmingDelete(true)} className="hud-button"
+                    style={{ padding: "0.5rem 1.1rem", fontSize: "0.75rem", color: "#ff7070",
+                             borderColor: "#8b1a1a", background: "rgba(139,26,26,0.18)" }}>
+                    SUPPRIMER LA CAMPAGNE
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {confirmingDelete && (
+        <DeleteCampaignModal
+          campaignId={bundle.campaign.id}
+          campaignName={bundle.campaign.name}
+          onClose={() => setConfirmingDelete(false)}
+          onDeleted={() => router.push("/")}
+        />
+      )}
       {editingFaction && faction && (
         <FactionEditor faction={faction} campaignId={bundle.campaign.id}
           onClose={() => setEditingFaction(false)} onSaved={() => router.refresh()} />
@@ -311,6 +341,84 @@ function UnitEditor({ campaignId, factionId, existing, onClose, onSaved }: {
               {saving ? "..." : (existing ? "ENREGISTRER" : "CRÉER")}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteCampaignModal({ campaignId, campaignName, onClose, onDeleted }: {
+  campaignId: string; campaignName: string;
+  onClose: () => void; onDeleted: () => void;
+}) {
+  const [typed, setTyped] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const matches = typed.trim() === campaignName.trim();
+
+  const confirm = async () => {
+    if (!matches) return;
+    setDeleting(true); setError(null);
+    const res = await apiEditCall("/api/campaigns", "DELETE", campaignId, {});
+    if (!res.ok) {
+      setDeleting(false);
+      setError(res.error ?? "Erreur lors de la suppression");
+      return;
+    }
+    // Purge du mot de passe local lié à cette campagne
+    try { sessionStorage.removeItem(`wh40k_pwd_${campaignId}`); } catch {}
+    onDeleted();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4 py-6"
+      style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
+      onClick={deleting ? undefined : onClose}>
+      <div className="hud-panel hud-panel--strong max-w-lg w-full p-5"
+        style={{ borderColor: "#8b1a1a" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="hud-label mb-1" style={{ color: "#ff7070" }}>⚠ SUPPRESSION DÉFINITIVE</div>
+        <h2 className="font-display text-xl mb-3" style={{ color: "#ff7070" }}>Supprimer la campagne ?</h2>
+
+        <p className="font-mono text-xs leading-relaxed mb-3" style={{ color: "var(--text-primary)" }}>
+          Tu es sur le point de supprimer définitivement la campagne <strong style={{ color: "var(--accent-cyan)" }}>{campaignName}</strong>
+          {" "}et toutes ses données associées :
+        </p>
+        <ul className="font-mono text-[11px] mb-4 ml-4 space-y-0.5" style={{ color: "var(--text-secondary)" }}>
+          <li>· Toutes les factions, alliances et unités</li>
+          <li>· Tous les systèmes stellaires et planètes</li>
+          <li>· Toutes les zones et batailles enregistrées</li>
+          <li>· Toutes les photos liées</li>
+        </ul>
+        <p className="font-mono text-xs mb-3" style={{ color: "#ffaa70" }}>
+          Cette action est <strong>irréversible</strong>. Pour confirmer, recopie le nom de la campagne :
+        </p>
+
+        <input value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus
+          placeholder={campaignName}
+          disabled={deleting}
+          className="w-full px-3 py-2 bg-black/40 border font-mono text-sm focus:outline-none mb-3"
+          style={{ borderColor: matches ? "#ff7070" : "var(--border-glow)", color: "var(--text-primary)" }} />
+
+        {error && (
+          <div className="mb-3 px-3 py-2 font-mono text-xs" style={{ color: "#ff7070", background: "rgba(139,26,26,0.18)", border: "1px solid #8b1a1a" }}>
+            ⚠ {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} disabled={deleting} className="hud-button"
+            style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>
+            ANNULER
+          </button>
+          <button onClick={confirm} disabled={!matches || deleting} className="hud-button"
+            style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem",
+                     color: matches ? "#ff7070" : "var(--text-faded)",
+                     borderColor: matches ? "#8b1a1a" : "var(--border-faded)",
+                     background: matches ? "rgba(139,26,26,0.25)" : "transparent",
+                     cursor: matches ? "crosshair" : "not-allowed" }}>
+            {deleting ? "SUPPRESSION..." : "SUPPRIMER DÉFINITIVEMENT"}
+          </button>
         </div>
       </div>
     </div>

@@ -87,3 +87,18 @@ export async function PUT(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+export async function DELETE(req: Request) {
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
+  const { id, campaignId, password } = body;
+  const targetId = campaignId ?? id;
+  if (!targetId) return NextResponse.json({ error: "Campaign id requis" }, { status: 400 });
+  if (!(await authorize(targetId, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const sb = supabaseServer();
+  // Toutes les tables filles ont ON DELETE CASCADE : alliances, factions (-> faction_units),
+  // stellar_systems (-> planets -> zones -> battles -> battle_photos).
+  const { error } = await sb.from("campaigns").delete().eq("id", targetId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
