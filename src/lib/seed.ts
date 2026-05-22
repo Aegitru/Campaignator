@@ -75,6 +75,7 @@ export const seedBattles: Battle[] = [
     winning_faction_id: "faction-ultramarines",
 
     participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
+    photo_url: null,
     created_at: "2026-04-12T08:00:00Z",
   },
   {
@@ -84,6 +85,7 @@ export const seedBattles: Battle[] = [
     winning_faction_id: "faction-deathguard",
 
     participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
+    photo_url: null,
     created_at: "2026-05-03T20:00:00Z",
   },
   {
@@ -93,6 +95,7 @@ export const seedBattles: Battle[] = [
     winning_faction_id: "faction-ultramarines",
 
     participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
+    photo_url: null,
     created_at: "2026-03-22T14:00:00Z",
   },
   {
@@ -102,6 +105,7 @@ export const seedBattles: Battle[] = [
     winning_faction_id: "faction-deathguard",
 
     participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
+    photo_url: null,
     created_at: "2026-02-15T22:00:00Z",
   },
   {
@@ -111,6 +115,7 @@ export const seedBattles: Battle[] = [
     winning_faction_id: null,
 
     participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
+    photo_url: null,
     created_at: "2026-01-08T10:00:00Z",
   },
   {
@@ -120,6 +125,7 @@ export const seedBattles: Battle[] = [
     winning_faction_id: "faction-ultramarines",
 
     participating_faction_ids: ["faction-ultramarines", "faction-deathguard"],
+    photo_url: null,
     created_at: "2026-04-28T06:00:00Z",
   },
 ];
