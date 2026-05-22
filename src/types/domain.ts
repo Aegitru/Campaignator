@@ -47,6 +47,7 @@ export interface FactionUnit {
   name: string;
   description: string;
   evolution_notes: string;
+  photo_url: string | null;
 }
 
 export interface StellarSystem {
@@ -87,6 +88,7 @@ export interface Battle {
   narrative_text: string;
   winning_faction_id: string | null;
   participating_faction_ids: string[];
+  photo_url: string | null;
   created_at: string;
 }
 

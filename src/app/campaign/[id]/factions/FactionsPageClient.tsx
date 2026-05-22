@@ -8,9 +8,13 @@ import { useSession } from "@/lib/session-context";
 import { apiEditCall } from "@/lib/api-edit";
 import { FactionSymbol, FACTION_SYMBOLS, SYMBOL_LABELS } from "@/lib/faction-symbols";
 import GlobalOverlays from "@/components/overlays/GlobalOverlays";
+import PhotoSlot from "@/components/common/PhotoSlot";
 import type { CampaignBundle } from "@/lib/supabase-queries";
 
-interface Unit { id: string; faction_id: string; name: string; description: string; evolution_notes: string }
+interface Unit {
+  id: string; faction_id: string; name: string; description: string;
+  evolution_notes: string; photo_url: string | null;
+}
 
 export default function FactionsPageClient({ bundle, units }: { bundle: CampaignBundle; units: Unit[] }) {
   return (
@@ -112,6 +116,14 @@ function FactionsInner({ bundle, units }: { bundle: CampaignBundle; units: Unit[
                     <ul className="space-y-2">
                       {factionUnits.map((u) => (
                         <li key={u.id} className="hud-panel--inset px-3 py-2 flex justify-between items-start gap-3">
+                          {u.photo_url && (
+                            <a href={u.photo_url} target="_blank" rel="noreferrer" className="flex-shrink-0" style={{ cursor: "crosshair" }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={u.photo_url} alt={u.name}
+                                className="w-16 h-16 object-cover border"
+                                style={{ borderColor: "var(--border-glow)" }} />
+                            </a>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="font-display text-sm" style={{ color: "var(--accent-cyan)" }}>{u.name}</div>
                             {u.description && <p className="font-mono text-xs mt-1" style={{ color: "var(--text-primary)" }}>{u.description}</p>}
@@ -266,6 +278,7 @@ function UnitEditor({ campaignId, factionId, existing, onClose, onSaved }: {
   const [name, setName] = useState(existing?.name ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [evolution, setEvolution] = useState(existing?.evolution_notes ?? "");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(existing?.photo_url ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -273,8 +286,8 @@ function UnitEditor({ campaignId, factionId, existing, onClose, onSaved }: {
     if (!name.trim()) { setError("Nom requis"); return; }
     setSaving(true); setError(null);
     const res = existing
-      ? await apiEditCall("/api/faction-units", "PUT", campaignId, { id: existing.id, name, description, evolution_notes: evolution })
-      : await apiEditCall("/api/faction-units", "POST", campaignId, { factionId, name, description, evolution_notes: evolution });
+      ? await apiEditCall("/api/faction-units", "PUT", campaignId, { id: existing.id, name, description, evolution_notes: evolution, photo_url: photoUrl })
+      : await apiEditCall("/api/faction-units", "POST", campaignId, { factionId, name, description, evolution_notes: evolution, photo_url: photoUrl });
     setSaving(false);
     if (!res.ok) { setError(res.error ?? "Erreur"); return; }
     onSaved(); onClose();
@@ -292,7 +305,7 @@ function UnitEditor({ campaignId, factionId, existing, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-6"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }} onClick={onClose}>
-      <div className="hud-panel hud-panel--strong max-w-lg w-full p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="hud-panel hud-panel--strong max-w-lg w-full max-h-[92vh] overflow-y-auto p-5" onClick={(e) => e.stopPropagation()}>
         <div className="hud-label mb-1">{existing ? "ÉDITION UNITÉ" : "NOUVELLE UNITÉ"}</div>
         <h2 className="font-display text-xl mb-4" style={{ color: "var(--accent-cyan)" }}>
           {existing ? "Modifier l'unité" : "Ajouter une unité"}
@@ -317,6 +330,14 @@ function UnitEditor({ campaignId, factionId, existing, onClose, onSaved }: {
               className="w-full px-3 py-2 bg-black/40 border font-mono text-xs focus:outline-none resize-none"
               style={{ borderColor: "var(--border-glow)", color: "var(--text-secondary)" }} />
           </div>
+          <PhotoSlot
+            value={photoUrl}
+            onChange={setPhotoUrl}
+            folder={`campaigns/${campaignId}/units`}
+            disabled={saving}
+            label="PHOTO DE L'UNITÉ"
+            height={180}
+          />
         </div>
 
         {error && (
@@ -338,7 +359,7 @@ function UnitEditor({ campaignId, factionId, existing, onClose, onSaved }: {
             <button onClick={onClose} className="hud-button" style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem" }}>ANNULER</button>
             <button onClick={save} disabled={saving} className="hud-button"
               style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem", background: "rgba(127,223,255,0.2)" }}>
-              {saving ? "..." : (existing ? "ENREGISTRER" : "CRÉER")}
+              {saving ? "..." : (existing ? "ENREGISTRER" : "CREER")}
             </button>
           </div>
         </div>
@@ -365,7 +386,6 @@ function DeleteCampaignModal({ campaignId, campaignName, onClose, onDeleted }: {
       setError(res.error ?? "Erreur lors de la suppression");
       return;
     }
-    // Purge du mot de passe local lié à cette campagne
     try { sessionStorage.removeItem(`wh40k_pwd_${campaignId}`); } catch {}
     onDeleted();
   };

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { useCampaign } from "@/lib/campaign-context";
 import { apiEditCall } from "@/lib/api-edit";
 import { useRouter } from "next/navigation";
+import PhotoSlot from "@/components/common/PhotoSlot";
 
 interface Props {
   zoneId: string;
@@ -14,6 +15,7 @@ interface Props {
     id: string; title: string; battle_date: string; narrative_text: string;
     winning_faction_id: string | null;
     participating_faction_ids?: string[];
+    photo_url?: string | null;
   };
   onClose: () => void;
 }
@@ -28,6 +30,7 @@ export default function BattleEditor({ zoneId, campaignId, existing, onClose }: 
   const [participating, setParticipating] = useState<string[]>(
     existing?.participating_faction_ids ?? (existing?.winning_faction_id ? [existing.winning_faction_id] : [])
   );
+  const [photoUrl, setPhotoUrl] = useState<string | null>(existing?.photo_url ?? null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -47,6 +50,7 @@ export default function BattleEditor({ zoneId, campaignId, existing, onClose }: 
       narrative_text: text,
       winning_faction_id: winner || null,
       participating_faction_ids: participating,
+      photo_url: photoUrl,
     };
     const res = existing
       ? await apiEditCall("/api/battles", "PUT", campaignId, { id: existing.id, ...payload })
@@ -155,6 +159,15 @@ export default function BattleEditor({ zoneId, campaignId, existing, onClose }: 
                 style={{ borderColor: "var(--border-glow)", color: "var(--text-primary)" }} />
             )}
           </div>
+
+          <PhotoSlot
+            value={photoUrl}
+            onChange={setPhotoUrl}
+            folder={`campaigns/${campaignId}/battles`}
+            disabled={submitting}
+            label="PHOTO DE LA BATAILLE"
+            height={220}
+          />
 
           {error && (
             <div className="px-3 py-2" style={{ color: "#ff7070", background: "rgba(139,26,26,0.18)", border: "1px solid #8b1a1a" }}>

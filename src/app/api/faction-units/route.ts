@@ -20,12 +20,18 @@ async function resolveCampaignFromUnit(unitId: string): Promise<string | null> {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Bad body" }, { status: 400 });
-  const { factionId, password, name, description, evolution_notes } = body;
+  const { factionId, password, name, description, evolution_notes, photo_url } = body;
   const cid = await resolveCampaignFromFaction(factionId);
   if (!cid || !(await authorize(cid, password))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const sb = supabaseServer();
   const { data, error } = await sb.from("faction_units")
-    .insert({ faction_id: factionId, name, description: description ?? "", evolution_notes: evolution_notes ?? "" })
+    .insert({
+      faction_id: factionId,
+      name,
+      description: description ?? "",
+      evolution_notes: evolution_notes ?? "",
+      photo_url: photo_url ?? null,
+    })
     .select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);

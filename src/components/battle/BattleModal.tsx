@@ -40,7 +40,10 @@ export default function BattleModal() {
   );
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const photos = useMemo<string[]>(() => [], []); // V3 : remplacer par les vraies photos Cloudinary
+  const photos = useMemo<string[]>(
+    () => (battle?.photo_url ? [battle.photo_url] : []),
+    [battle]
+  );
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {

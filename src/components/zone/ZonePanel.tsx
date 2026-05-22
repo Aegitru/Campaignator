@@ -157,6 +157,7 @@ export default function ZonePanel() {
           id: editingBattle.id, title: editingBattle.title, battle_date: editingBattle.battle_date,
           narrative_text: editingBattle.narrative_text, winning_faction_id: editingBattle.winning_faction_id,
           participating_faction_ids: (editingBattle as any).participating_faction_ids ?? [],
+          photo_url: (editingBattle as any).photo_url ?? null,
         }} onClose={() => setEditBattleId(null)} />
       )}
     </>
