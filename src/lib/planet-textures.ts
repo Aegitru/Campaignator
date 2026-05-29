@@ -516,10 +516,10 @@ function getCloudCanvas(seed: number, cloudColor: [number, number, number]): HTM
 // de fallback tant que l'image n'est pas encore disponible.
 type SpriteKey = `${PlanetType}-${PlanetVariant}`;
 const SPRITE_PUBLIC_IDS: Partial<Record<SpriteKey, string>> = {
-  "other-1": "campaignatorother_v1_tg4rp2", // station gothique
-  "other-2": "campaignatorother_v2_m8k0hb", // épave / ruine flottante
-  "other-3": "campaignatorother_v3_q8e8ub", // champ d'astéroïdes
-  "other-4": "campaignatorother_v4_pbcthm", // mine astéroïdale
+  "other-1": "campaignatorother_v1-Photoroom_fcelzh", // station gothique
+  "other-2": "campaignatorother_v2-Photoroom_b4nwmj", // épave / ruine flottante
+  "other-3": "campaignatorother_v3-Photoroom_mf3jnk", // champ d'astéroïdes
+  "other-4": "campaignatorother_v4-Photoroom_kps5xq", // mine astéroïdale
 };
 const spriteImgCache = new Map<string, HTMLImageElement>();
 

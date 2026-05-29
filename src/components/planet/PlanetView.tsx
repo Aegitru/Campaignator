@@ -7,19 +7,27 @@ import { drawPlanet, hashString } from "@/lib/planet-textures";
 interface PlanetViewProps {
   planet: Planet;
   zones: Zone[];
+  moons: Planet[];
   factionById: Map<string, Faction>;
   battleCountByZone: Map<string, number>;
   onZoneClick?: (zone: Zone) => void;
+  onMoonClick?: (moon: Planet) => void;
 }
 
+interface MoonHit { id: string; x: number; y: number; r: number }
+
 export default function PlanetView({
-  planet, zones, factionById, battleCountByZone, onZoneClick,
+  planet, zones, moons, factionById, battleCountByZone, onZoneClick, onMoonClick,
 }: PlanetViewProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const moonHitsRef = useRef<Map<string, MoonHit>>(new Map());
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hoverZoneId, setHoverZoneId] = useState<string | null>(null);
+  const [hoverMoonId, setHoverMoonId] = useState<string | null>(null);
+  // bump pour forcer un re-render react quand les positions des lunes bougent
+  const [moonTick, setMoonTick] = useState(0);
 
   const planetSeed = useMemo(() => hashString(planet.id), [planet.id]);
 
@@ -71,6 +79,8 @@ export default function PlanetView({
     const cx = size.w / 2; const cy = size.h / 2;
     const planetR = Math.min(size.w, size.h) * 0.28;
 
+    let frameCount = 0;
+
     const tick = (time: number) => {
       ctx.clearRect(0, 0, size.w, size.h);
       drawPlanet(ctx, cx, cy, planetR, planet.planet_type, planet.variant, planetSeed, time);
@@ -82,19 +92,49 @@ export default function PlanetView({
       ctx.stroke();
       ctx.restore();
 
-      if (planet.has_moon) {
-        const moonOrbitR = planetR * 1.45;
-        const a = time * 0.00015;
-        const mx = cx + Math.cos(a) * moonOrbitR;
-        const my = cy + Math.sin(a) * moonOrbitR * 0.55;
-        drawPlanet(ctx, mx, my, planetR * 0.12, "rocky", 2, planetSeed + 1, time);
+      // Lunes (vraies planètes filles)
+      const newHits = new Map<string, MoonHit>();
+      moons.forEach((moon, mi) => {
+        const moonOrbitR = planetR * (1.55 + mi * 0.45);
+        const moonSpeed = (0.00012 + mi * 0.00005) * Math.max(0.2, moon.orbit_speed || 1);
+        const moonAngle = time * moonSpeed + mi * 2.1;
+        const mx = cx + Math.cos(moonAngle) * moonOrbitR;
+        const my = cy + Math.sin(moonAngle) * moonOrbitR * 0.55;
+        const mr = Math.max(10, planetR * 0.18);
+
+        // Anneau d'orbite lunaire (très subtil)
+        ctx.save();
+        ctx.strokeStyle = "rgba(180, 220, 255, 0.08)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, moonOrbitR, moonOrbitR * 0.55, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        drawPlanet(ctx, mx, my, mr, moon.planet_type, moon.variant, hashString(moon.id), time);
+
+        // Petit label sous la lune
+        ctx.save();
+        ctx.font = "10px var(--font-share-tech-mono), ui-monospace, monospace";
+        ctx.fillStyle = "rgba(200, 220, 240, 0.7)";
+        ctx.textAlign = "center";
+        ctx.fillText(moon.name.toUpperCase(), mx, my + mr + 14);
+        ctx.restore();
+
+        newHits.set(moon.id, { id: moon.id, x: mx, y: my, r: mr });
+      });
+      moonHitsRef.current = newHits;
+      // Rafraîchir les boutons overlay ~10 fois / sec pour les coller aux lunes
+      frameCount++;
+      if (moons.length > 0 && frameCount % 6 === 0) {
+        setMoonTick((t) => (t + 1) % 1000000);
       }
 
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [size.w, size.h, planet.planet_type, planet.variant, planet.has_moon, planetSeed]);
+  }, [size.w, size.h, planet.planet_type, planet.variant, planetSeed, moons]);
 
   const handleHexEnter = (id: string) => setHoverZoneId(id);
   const handleHexLeave = () => setHoverZoneId(null);
@@ -103,9 +143,48 @@ export default function PlanetView({
     onZoneClick?.(z);
   };
 
+  // Snapshot des positions actuelles (utilisé pour positionner les boutons overlay)
+  const moonHitsArr = useMemo<MoonHit[]>(() => {
+    void moonTick; // dépendance pour re-render
+    return Array.from(moonHitsRef.current.values());
+  }, [moonTick, moons]);
+
   return (
     <div ref={wrapperRef} className="relative w-full h-full overflow-hidden">
       <canvas ref={canvasRef} />
+
+      {/* Boutons cliquables overlay sur chaque lune */}
+      {moonHitsArr.map((hit) => {
+        const moon = moons.find((m) => m.id === hit.id);
+        if (!moon) return null;
+        const isHover = hoverMoonId === hit.id;
+        const padding = 6;
+        return (
+          <button
+            key={hit.id}
+            onClick={(e) => { e.stopPropagation(); onMoonClick?.(moon); }}
+            onMouseEnter={() => setHoverMoonId(hit.id)}
+            onMouseLeave={() => setHoverMoonId(null)}
+            className="absolute"
+            style={{
+              left: hit.x - hit.r - padding,
+              top: hit.y - hit.r - padding,
+              width: (hit.r + padding) * 2,
+              height: (hit.r + padding) * 2,
+              borderRadius: "50%",
+              background: "transparent",
+              border: isHover ? "1px solid rgba(127, 223, 255, 0.9)" : "1px solid transparent",
+              boxShadow: isHover ? "0 0 14px rgba(127, 223, 255, 0.55)" : "none",
+              cursor: "crosshair",
+              padding: 0,
+              zIndex: 12,
+              transition: "border-color 0.18s ease, box-shadow 0.18s ease",
+            }}
+            aria-label={moon.name}
+            title={moon.name}
+          />
+        );
+      })}
 
       {/* Hexagones overlay - HTML pour click events fiables */}
       {hexPositions.map(({ zone, hx, hy, lx, ly, hexSize }) => {

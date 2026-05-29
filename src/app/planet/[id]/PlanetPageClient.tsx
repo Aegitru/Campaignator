@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Planet, Zone } from "@/types/domain";
 import PlanetView from "@/components/planet/PlanetView";
 import { CampaignProvider, useCampaign } from "@/lib/campaign-context";
@@ -9,6 +10,7 @@ import { useSession } from "@/lib/session-context";
 import QuickCreateModal from "@/components/edit/QuickCreateModal";
 import PlanetInfoModal from "@/components/planet/PlanetInfoModal";
 import GlobalOverlays from "@/components/overlays/GlobalOverlays";
+import ScanLoader from "@/components/visual/ScanLoader";
 import type { CampaignData } from "@/lib/fetch-campaign-data";
 
 interface Props {
@@ -32,11 +34,14 @@ export default function PlanetPageClient(props: Props) {
 }
 
 function PlanetPageInner({ planet, zones, systemId, data }: Props) {
-  const { factions, battles, openZone } = useCampaign();
+  const router = useRouter();
+  const { factions, battles, openZone, planets } = useCampaign();
   const { isCampaignUnlocked } = useSession();
   const editing = !data.isSeed && isCampaignUnlocked(data.campaign.id);
   const [showCreateZone, setShowCreateZone] = useState(false);
+  const [showCreateMoon, setShowCreateMoon] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   const factionById = useMemo(() => new Map(factions.map((f) => [f.id, f])), [factions]);
   const battleCountByZone = useMemo(() => {
@@ -45,11 +50,24 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
     return m;
   }, [zones, battles]);
 
+  // Lunes = enfants directs de cette planète
+  const moons = useMemo(
+    () => planets.filter((p) => p.parent_planet_id === planet.id),
+    [planets, planet.id]
+  );
+
+  const navigateToMoon = (m: Planet) => {
+    setNavigating(true);
+    setTimeout(() => router.push(`/planet/${m.id}`), 100);
+  };
+
   return (
     <div className="relative w-full" style={{ height: "100dvh" }}>
       <div className="absolute inset-0 z-0">
-        <PlanetView planet={planet} zones={zones} factionById={factionById}
-          battleCountByZone={battleCountByZone} onZoneClick={(z) => openZone(z.id)} />
+        <PlanetView planet={planet} zones={zones} moons={moons} factionById={factionById}
+          battleCountByZone={battleCountByZone}
+          onZoneClick={(z) => openZone(z.id)}
+          onMoonClick={navigateToMoon} />
       </div>
 
       {/* Header overlay top-left */}
@@ -75,12 +93,22 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
           </button>
         </div>
         {editing && (
-          <button onClick={() => setShowCreateZone(true)} className="hud-button"
-            style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem", background: "rgba(127,223,255,0.15)" }}
-            disabled={zones.length >= 5}
-            title={zones.length >= 5 ? "Max 5 zones" : ""}>
-            + AJOUTER ZONE
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setShowCreateZone(true)} className="hud-button"
+              style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem", background: "rgba(127,223,255,0.15)" }}
+              disabled={zones.length >= 5}
+              title={zones.length >= 5 ? "Max 5 zones" : ""}>
+              + AJOUTER ZONE
+            </button>
+            {!planet.parent_planet_id && (
+              <button onClick={() => setShowCreateMoon(true)} className="hud-button"
+                style={{ padding: "0.4rem 0.9rem", fontSize: "0.7rem", background: "rgba(180,220,255,0.10)" }}
+                disabled={moons.length >= 3}
+                title={moons.length >= 3 ? "Max 3 lunes" : ""}>
+                + AJOUTER LUNE
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -88,7 +116,11 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
       <div className="absolute bottom-6 left-6 z-20 hidden md:flex items-center gap-4">
         <div className="hud-label hud-pulse" style={{ color: "var(--accent-blue)" }}>◉ SURFACE SCAN</div>
         <div className="hud-label">{zones.length} ZONE{zones.length > 1 ? "S" : ""} CARTOGRAPHIEE{zones.length > 1 ? "S" : ""}</div>
-        {planet.has_moon && <div className="hud-label" style={{ color: "var(--text-faded)" }}>1 LUNE</div>}
+        {moons.length > 0 && (
+          <div className="hud-label" style={{ color: "var(--text-faded)" }}>
+            {moons.length} LUNE{moons.length > 1 ? "S" : ""}
+          </div>
+        )}
       </div>
 
       {showInfo && (
@@ -97,9 +129,20 @@ function PlanetPageInner({ planet, zones, systemId, data }: Props) {
           canEdit={editing} onClose={() => setShowInfo(false)} />
       )}
 
+      {navigating && (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center" style={{ background: "rgba(5,10,25,0.92)", backdropFilter: "blur(4px)" }}>
+          <ScanLoader label="SCANNING SURFACE" />
+        </div>
+      )}
+
       {showCreateZone && (
         <QuickCreateModal mode={{ kind: "zone", campaignId: data.campaign.id, planetId: planet.id }}
           onClose={() => setShowCreateZone(false)} />
+      )}
+
+      {showCreateMoon && (
+        <QuickCreateModal mode={{ kind: "moon", campaignId: data.campaign.id, parentPlanetId: planet.id, systemId: planet.system_id }}
+          onClose={() => setShowCreateMoon(false)} />
       )}
     </div>
   );
