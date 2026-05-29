@@ -14,7 +14,7 @@ interface PlanetViewProps {
   onMoonClick?: (moon: Planet) => void;
 }
 
-interface MoonHit { id: string; x: number; y: number; r: number }
+interface MoonHit { id: string; x: number; y: number; r: number; inFront: boolean }
 
 export default function PlanetView({
   planet, zones, moons, factionById, battleCountByZone, onZoneClick, onMoonClick,
@@ -83,6 +83,45 @@ export default function PlanetView({
 
     const tick = (time: number) => {
       ctx.clearRect(0, 0, size.w, size.h);
+
+      // Calcul des positions de chaque lune + drapeau front/back
+      type MoonPos = {
+        moon: Planet; mi: number; mx: number; my: number; mr: number;
+        moonOrbitR: number; inFront: boolean; sinA: number;
+      };
+      const moonPositions: MoonPos[] = moons.map((moon, mi) => {
+        const moonOrbitR = planetR * (1.55 + mi * 0.45);
+        const moonSpeed = (0.00012 + mi * 0.00005) * Math.max(0.2, moon.orbit_speed || 1);
+        const moonAngle = time * moonSpeed + mi * 2.1;
+        const cosA = Math.cos(moonAngle);
+        const sinA = Math.sin(moonAngle);
+        const mx = cx + cosA * moonOrbitR;
+        const my = cy + sinA * moonOrbitR * 0.55;
+        const mr = Math.max(10, planetR * 0.18);
+        // L'orbite est inclinée : la moitié basse (sinA > 0) est en avant du
+        // plan de la planète, la moitié haute (sinA < 0) est derrière.
+        const inFront = sinA > 0;
+        return { moon, mi, mx, my, mr, moonOrbitR, inFront, sinA };
+      });
+
+      // 1) Anneaux d'orbite (subtils) — dessinés en premier pour que la planète
+      // recouvre la moitié arrière naturellement
+      moonPositions.forEach(({ moonOrbitR }) => {
+        ctx.save();
+        ctx.strokeStyle = "rgba(180, 220, 255, 0.08)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, moonOrbitR, moonOrbitR * 0.55, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // 2) Lunes DERRIÈRE la planète (seront partiellement masquées par le draw planète)
+      moonPositions.filter((p) => !p.inFront).forEach(({ moon, mx, my, mr }) => {
+        drawPlanet(ctx, mx, my, mr, moon.planet_type, moon.variant, hashString(moon.id), time);
+      });
+
+      // 3) Planète principale + halo
       drawPlanet(ctx, cx, cy, planetR, planet.planet_type, planet.variant, planetSeed, time);
       ctx.save();
       ctx.strokeStyle = "rgba(127, 223, 255, 0.10)";
@@ -92,36 +131,26 @@ export default function PlanetView({
       ctx.stroke();
       ctx.restore();
 
-      // Lunes (vraies planètes filles)
-      const newHits = new Map<string, MoonHit>();
-      moons.forEach((moon, mi) => {
-        const moonOrbitR = planetR * (1.55 + mi * 0.45);
-        const moonSpeed = (0.00012 + mi * 0.00005) * Math.max(0.2, moon.orbit_speed || 1);
-        const moonAngle = time * moonSpeed + mi * 2.1;
-        const mx = cx + Math.cos(moonAngle) * moonOrbitR;
-        const my = cy + Math.sin(moonAngle) * moonOrbitR * 0.55;
-        const mr = Math.max(10, planetR * 0.18);
-
-        // Anneau d'orbite lunaire (très subtil)
-        ctx.save();
-        ctx.strokeStyle = "rgba(180, 220, 255, 0.08)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, moonOrbitR, moonOrbitR * 0.55, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
+      // 4) Lunes EN AVANT
+      moonPositions.filter((p) => p.inFront).forEach(({ moon, mx, my, mr }) => {
         drawPlanet(ctx, mx, my, mr, moon.planet_type, moon.variant, hashString(moon.id), time);
+      });
 
-        // Petit label sous la lune
+      // 5) Labels — uniquement pour les lunes en avant (sinon le label
+      // flotterait sur la planète sans la lune)
+      moonPositions.filter((p) => p.inFront).forEach(({ moon, mx, my, mr }) => {
         ctx.save();
         ctx.font = "10px var(--font-share-tech-mono), ui-monospace, monospace";
         ctx.fillStyle = "rgba(200, 220, 240, 0.7)";
         ctx.textAlign = "center";
         ctx.fillText(moon.name.toUpperCase(), mx, my + mr + 14);
         ctx.restore();
+      });
 
-        newHits.set(moon.id, { id: moon.id, x: mx, y: my, r: mr });
+      // 6) Hits pour les boutons cliquables (toutes les lunes, avec inFront)
+      const newHits = new Map<string, MoonHit>();
+      moonPositions.forEach(({ moon, mx, my, mr, inFront }) => {
+        newHits.set(moon.id, { id: moon.id, x: mx, y: my, r: mr, inFront });
       });
       moonHitsRef.current = newHits;
       // Rafraîchir les boutons overlay ~10 fois / sec pour les coller aux lunes
@@ -153,8 +182,8 @@ export default function PlanetView({
     <div ref={wrapperRef} className="relative w-full h-full overflow-hidden">
       <canvas ref={canvasRef} />
 
-      {/* Boutons cliquables overlay sur chaque lune */}
-      {moonHitsArr.map((hit) => {
+      {/* Boutons cliquables overlay sur chaque lune — uniquement quand en avant */}
+      {moonHitsArr.filter((h) => h.inFront).map((hit) => {
         const moon = moons.find((m) => m.id === hit.id);
         if (!moon) return null;
         const isHover = hoverMoonId === hit.id;
